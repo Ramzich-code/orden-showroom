@@ -1,6 +1,6 @@
 "use client";
 
-import { SITE } from "@/config/site";
+import { SITE, asset } from "@/config/site";
 import { ROOMS } from "@/config/rooms";
 import { useShowroom } from "@/lib/store";
 import { restStep, stepStart } from "@/config/journey";
@@ -54,7 +54,7 @@ export function Header() {
         data-on={entered || undefined}
         className="pointer-events-none absolute inset-x-0 top-0 z-30 flex items-start justify-between px-5 pt-5 opacity-0 transition-opacity duration-[1400ms] ease-[var(--ease-cine)] data-on:opacity-100 md:px-10 md:pt-8"
       >
-        <a href="/" className="pointer-events-auto flex flex-col gap-1.5" aria-label={`${SITE.brand} home`}>
+        <a href={asset("/")} className="pointer-events-auto flex flex-col gap-1.5" aria-label={`${SITE.brand} home`}>
           <span className="text-[13px] font-semibold tracking-[0.5em] text-ink">{SITE.brand}</span>
           <span className="eyebrow text-charcoal/70">{SITE.descriptor}</span>
         </a>

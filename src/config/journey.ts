@@ -8,6 +8,7 @@
  */
 import type { RoomId } from "./rooms";
 import manifest from "./journey.json";
+import { asset } from "@/config/site";
 
 export type SegmentId = "exterior" | RoomId;
 
@@ -53,5 +54,5 @@ export const hasPortraitFrames = (segment: SegmentId) => !!frames[segment]?.port
 
 export function frameUrl(segment: SegmentId, portrait: boolean, i: number) {
   const dir = portrait && hasPortraitFrames(segment) ? `${segment}-p` : segment;
-  return `/journey/${dir}/${String(i + 1).padStart(3, "0")}.webp`;
+  return asset(`/journey/${dir}/${String(i + 1).padStart(3, "0")}.webp`);
 }

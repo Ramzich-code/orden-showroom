@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import type { FinishId, MaterialRole, Product } from "@/config/products";
+import { asset } from "@/config/site";
 
 /**
  * Real-time materials, matched to the Cycles materials in
@@ -49,7 +50,7 @@ const loader = new THREE.TextureLoader();
 const textures = new Map<string, THREE.Texture>();
 
 function scanTexture(key: Scanned, map: "color" | "rough" | "normal") {
-  const url = `/textures/${key}_${map}.jpg`;
+  const url = asset(`/textures/${key}_${map}.jpg`);
   let t = textures.get(url);
   if (!t) {
     t = loader.load(url);

@@ -17,6 +17,7 @@ import type { ProductId } from "./products";
 import living from "./scenes/living.json";
 import bedroom from "./scenes/bedroom.json";
 import storage from "./scenes/storage.json";
+import { asset } from "@/config/site";
 
 export type RoomId = "living" | "bedroom" | "storage";
 
@@ -114,12 +115,12 @@ export function sceneCamera(room: RoomId, shot: Shot, o: Orientation): SceneCame
 export const cameraSlug = (name: string) => name.replace(/^cam_/, "").replace(/_p$/, "-p").replace(/_/g, "-");
 
 export function roomAsset(room: RoomId, shot: Shot, kind: "beauty" | "plate" | "depth", o: Orientation = "landscape") {
-  return `/rooms/${room}/${cameraSlug(cameraName(room, shot, o))}-${kind}.webp`;
+  return asset(`/rooms/${room}/${cameraSlug(cameraName(room, shot, o))}-${kind}.webp`);
 }
 
 export const hasPortrait = (room: RoomId) => !!ROOM_MAP[room].scene.cameras.cam_room_p;
 
-export const probeUrl = (room: RoomId, product: ProductId) => `/rooms/${room}/probe-${product}.hdr`;
+export const probeUrl = (room: RoomId, product: ProductId) => asset(`/rooms/${room}/probe-${product}.hdr`);
 
 /** Where a product stands in its room (three.js coordinates). */
 export const placement = (room: RoomId, product: ProductId) => ROOM_MAP[room].scene.products[product]!;

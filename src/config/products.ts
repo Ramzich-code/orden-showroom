@@ -9,6 +9,7 @@
  * (`role`), so finishes and the exploded view need no code changes when a
  * model is replaced, as long as the names and roles are kept.
  */
+import { asset } from "@/config/site";
 
 export type Vec3 = [number, number, number];
 
@@ -103,7 +104,7 @@ export const PRODUCTS: Product[] = [
       body: "walnut",
     },
     defaultFinish: "signature",
-    model: "/models/coffee-table.glb",
+    model: asset("/models/coffee-table.glb"),
     components: [
       { id: "top", label: "Top slab", detail: "Travertine · 70 mm", explode: [0, 0.32, 0], annotate: true },
       { id: "panel", label: "Side panel", detail: "Solid · 30 mm", explode: [-0.32, 0.08, 0], annotate: true },
@@ -129,7 +130,7 @@ export const PRODUCTS: Product[] = [
       body: "taupe",
     },
     defaultFinish: "signature",
-    model: "/models/bedside-table.glb",
+    model: asset("/models/bedside-table.glb"),
     components: [
       { id: "top", label: "Top", detail: "Marble-effect · 30 mm", explode: [0, 0.3, 0.04], annotate: true },
       { id: "side-l", label: "Side", detail: "Raised 20 mm frame", explode: [-0.26, 0.02, 0], annotate: true },
@@ -156,7 +157,7 @@ export const PRODUCTS: Product[] = [
     details: ["Two flush doors between rounded sides", "Full-width shelf and steel rail", "Slim 35 cm pulls", "Raised on 6 cm legs"],
     signature: { name: "Warm Greige", swatch: "#D6C9B5", description: "Matte lacquer, warm greige, walnut pulls", body: "greige" },
     defaultFinish: "signature",
-    model: "/models/wardrobe.glb",
+    model: asset("/models/wardrobe.glb"),
     components: [
       { id: "door-l", label: "Door", detail: "22 mm · flush", explode: [-0.28, 0, 0.75], annotate: true },
       { id: "door-r", label: "Door", explode: [0.28, 0, 0.75] },
@@ -190,7 +191,7 @@ export const PRODUCTS: Product[] = [
     signature: { name: "Oat Bouclé", swatch: "#D8CCB8", description: "Wool-blend boucle, oatmeal", body: "oak" },
     defaultFinish: "signature",
     finishes: ["signature"],
-    model: "/models/sofa.glb",
+    model: asset("/models/sofa.glb"),
     components: [
       { id: "back-cushion-l", label: "Back cushion", detail: "Feather & foam", explode: [-0.05, 0.3, -0.05], annotate: true },
       { id: "back-cushion-r", label: "Back cushion", explode: [0.05, 0.3, -0.05] },
@@ -217,7 +218,7 @@ export const PRODUCTS: Product[] = [
     signature: { name: "Natural Oak", swatch: "#C8A77C", description: "Oak, oiled, anthracite sockets", body: "oak" },
     defaultFinish: "signature",
     finishes: ["signature", "white", "black"],
-    model: "/models/headboard-shelf.glb",
+    model: asset("/models/headboard-shelf.glb"),
     components: [
       { id: "shelf", label: "Ledge", detail: "Oak · 25 mm", explode: [0, 0.16, 0], annotate: true },
       { id: "led-l", label: "LED strip", detail: "2700 K, opal diffuser", explode: [0, 0.3, 0], annotate: true },
@@ -245,7 +246,7 @@ export const PRODUCTS: Product[] = [
     signature: { name: "Natural Oak", swatch: "#C8A77C", description: "Oak, oiled, oatmeal boucle cushion", body: "oak" },
     defaultFinish: "signature",
     finishes: ["signature", "white", "black"],
-    model: "/models/shoe-bench.glb",
+    model: asset("/models/shoe-bench.glb"),
     components: [
       { id: "cushion", label: "Cushion", detail: "Boucle · 60 mm", explode: [0, 0.32, 0], annotate: true },
       { id: "top", label: "Top", explode: [0, 0.2, 0] },

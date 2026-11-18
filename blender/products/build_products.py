@@ -373,6 +373,134 @@ def build_wardrobe(col):
 
 
 # --------------------------------------------------------------------------- #
+# Collection 001 additions (client references, 2026-11-18)
+# Shared details: flush anthracite socket plates and recessed LED strips.
+# --------------------------------------------------------------------------- #
+
+def socket_plate_bmesh(n, pitch=0.07, plate=(0.07, 0.07), t=0.004, usb=False):
+    """Anthracite plate with n round sockets in a row along X (and a USB slot
+    when usb=True), lying flat, top face at z=+t/2."""
+    w = plate[0] + (n - 1) * pitch
+    bm = _box_bmesh(w, plate[1], t)
+    _bevel(bm, list(bm.edges), 0.0012, 2)
+    for i in range(n):
+        x = -w / 2 + plate[0] / 2 + i * pitch
+        geom = bmesh.ops.create_cone(bm, cap_ends=True, cap_tris=False, segments=32,
+                                     radius1=0.021, radius2=0.021, depth=0.002)
+        bmesh.ops.translate(bm, verts=geom["verts"], vec=(x, 0, t / 2 + 0.001))
+    if usb:
+        geom = bmesh.ops.create_cube(bm, size=1.0)
+        for v in geom["verts"]:
+            v.co = Vector((v.co.x * 0.014, v.co.y * 0.006, v.co.z * 0.002))
+        bmesh.ops.translate(bm, verts=geom["verts"], vec=(w / 2 - plate[0] / 2, -plate[1] * 0.3, t / 2 + 0.001))
+    return bm
+
+
+def grommet_bmesh(r=0.03, depth=0.006):
+    bm = bmesh.new()
+    bmesh.ops.create_cone(bm, cap_ends=True, cap_tris=False, segments=40, radius1=r, radius2=r, depth=depth)
+    bmesh.ops.create_cone(bm, cap_ends=True, cap_tris=False, segments=40, radius1=r * 0.55, radius2=r * 0.55, depth=depth + 0.001)
+    return bm
+
+
+# --------------------------------------------------------------------------- #
+# PRODUCT 04 — Lys Headboard Shelf (bedroom)
+# Reference: an oak ledge along the top of the bed head, two LED strips set
+# into it that wash the wall, a row of four sockets and a socket with USB.
+# Wall-mounted on a hidden apron; root at the floor below its centre, the
+# ledge at the headboard's height.
+# --------------------------------------------------------------------------- #
+
+HEADBOARD_SHELF = dict(L=2.20, D=0.16, t=0.025, z=1.17, apron_h=0.12, apron_t=0.018,
+                       led_len=0.58, led_w=0.012, led_y=0.035)
+
+
+def build_headboard_shelf(col):
+    c = HEADBOARD_SHELF
+    root = make_root("headboard-shelf", col)
+    L, D, t, z = c["L"], c["D"], c["t"], c["z"]
+    shelf = make_object("shelf", slab_bmesh((L, D, t), 0.008, 0.003, corner_segments=4, edge_segments=3),
+                        (0, 0, z - t / 2), root, "body", "x", col)
+    # LED grooves near the wall edge, each holding a flush opal diffuser
+    for name, x in (("led-l", -0.52), ("led-r", 0.45)):
+        notch(shelf, (x, c["led_y"], z), (c["led_len"], c["led_w"], 0.016))
+        make_object(name, panel_bmesh((c["led_len"] - 0.004, c["led_w"] - 0.002, 0.006), 0.002, 2),
+                    (x, c["led_y"], z - 0.004), root, "light", "x", col)
+    make_object("sockets", socket_plate_bmesh(4), (-0.02, -0.01, z + 0.002), root, "socket", "x", col)
+    make_object("usb-socket", socket_plate_bmesh(1, usb=True, plate=(0.08, 0.08)), (L / 2 - 0.12, -0.01, z + 0.002), root, "socket", "x", col)
+    make_object("socket-end", socket_plate_bmesh(1, plate=(0.055, 0.055)), (-L / 2 + 0.07, 0.02, z + 0.002), root, "socket", "x", col)
+    make_object("apron", panel_bmesh((L - 0.04, c["apron_t"], c["apron_h"]), 0.0015),
+                (0, D / 2 - c["apron_t"] / 2, z - t - c["apron_h"] / 2), root, "body", "z", col)
+    for name, x in (("bracket-l", -L / 2 + 0.25), ("bracket-r", L / 2 - 0.25)):
+        make_object(name, panel_bmesh((0.03, D - 0.03, 0.004), 0.001), (x, 0.0, z - t - 0.002), root, "metal", "y", col)
+    return root
+
+
+# --------------------------------------------------------------------------- #
+# PRODUCT 05 — Rygg Sofa Console (living)
+# Reference: a long, narrow solid-wood console standing behind the sofa: a
+# thick top with softly rounded ends on three slab legs, a flush socket and
+# USB module in the top and a cable grommet high in the end leg.
+# --------------------------------------------------------------------------- #
+
+SOFA_CONSOLE = dict(L=1.60, D=0.24, H=0.76, top_t=0.035, leg_w=0.11, leg_d=0.20, leg_inset=0.03)
+
+
+def build_sofa_console(col):
+    c = SOFA_CONSOLE
+    root = make_root("sofa-console", col)
+    L, D, H, tt = c["L"], c["D"], c["H"], c["top_t"]
+    make_object("top", slab_bmesh((L, D, tt), 0.03, 0.006, corner_segments=8, edge_segments=4),
+                (0, 0, H - tt / 2), root, "body", "x", col)
+    leg_h = H - tt
+    xs = {"leg-l": -L / 2 + c["leg_inset"] + c["leg_w"] / 2,
+          "leg-m": -0.08,
+          "leg-r": L / 2 - c["leg_inset"] - c["leg_w"] / 2}
+    for name, x in xs.items():
+        make_object(name, panel_bmesh((c["leg_w"], c["leg_d"], leg_h), 0.004, 3), (x, 0.005, leg_h / 2), root, "body", "z", col)
+    make_object("sockets", socket_plate_bmesh(3, pitch=0.065, plate=(0.065, 0.06), usb=True),
+                (L / 2 - 0.30, 0.01, H + 0.002), root, "socket", "x", col)
+    g = grommet_bmesh()
+    bmesh.ops.rotate(g, verts=g.verts, cent=(0, 0, 0), matrix=__import__("mathutils").Matrix.Rotation(math.radians(90), 3, "Y"))
+    make_object("grommet", g, (L / 2 - c["leg_inset"] + 0.003, 0.0, 0.62), root, "socket", "x", col)
+    return root
+
+
+# --------------------------------------------------------------------------- #
+# PRODUCT 06 — Sko Shoe Bench (dressing)
+# A low oak bench to sit on while dressing: upholstered cushion, three open
+# bays for shoes with a shelf, and the collection's dark recessed plinth.
+# --------------------------------------------------------------------------- #
+
+SHOE_BENCH = dict(W=1.20, D=0.38, H=0.47, t=0.022, cushion_t=0.06, plinth_h=0.05, plinth_inset=0.04)
+
+
+def build_shoe_bench(col):
+    c = SHOE_BENCH
+    root = make_root("shoe-bench", col)
+    W, D, H, t, ct, ph = c["W"], c["D"], c["H"], c["t"], c["cushion_t"], c["plinth_h"]
+    carcass_top = H - ct
+    inner_w = W - 2 * t
+    side_h = carcass_top - ph
+    for name, x in (("side-l", -W / 2 + t / 2), ("side-r", W / 2 - t / 2)):
+        make_object(name, panel_bmesh((t, D, side_h), 0.0018), (x, 0, ph + side_h / 2), root, "body", "z", col)
+    make_object("top", panel_bmesh((W, D, t), 0.0018), (0, 0, carcass_top - t / 2), root, "body", "x", col)
+    make_object("bottom", panel_bmesh((inner_w, D - 0.012, t), 0.0015), (0, 0.006, ph + t / 2), root, "body", "x", col)
+    make_object("back", panel_bmesh((inner_w, 0.012, side_h - 2 * t), 0.001), (0, D / 2 - 0.006, ph + side_h / 2), root, "body", "z", col)
+    bay = inner_w / 3
+    inner_h = side_h - 2 * t
+    for name, x in (("divider-l", -inner_w / 2 + bay), ("divider-r", inner_w / 2 - bay)):
+        make_object(name, panel_bmesh((t * 0.8, D - 0.03, inner_h), 0.0015), (x, 0.003, ph + t + inner_h / 2), root, "body", "z", col)
+    make_object("shelf", panel_bmesh((inner_w - 0.002, D - 0.04, 0.018), 0.0015),
+                (0, 0.008, ph + t + inner_h * 0.48), root, "body", "x", col)
+    make_object("cushion", slab_bmesh((W - 0.01, D - 0.01, ct), 0.03, 0.022, corner_segments=8, edge_segments=6),
+                (0, 0, carcass_top + ct / 2), root, "fabric", "x", col)
+    pi = c["plinth_inset"]
+    make_object("plinth", panel_bmesh((W - 2 * pi, D - 2 * pi, ph), 0.001), (0, 0, ph / 2), root, "base", "x", col)
+    return root
+
+
+# --------------------------------------------------------------------------- #
 
 def reset_scene():
     bpy.ops.wm.read_factory_settings(use_empty=True)
@@ -385,6 +513,9 @@ BUILDERS.update({
     "coffee-table": build_coffee_table,
     "bedside-table": build_bedside_table,
     "wardrobe": build_wardrobe,
+    "headboard-shelf": build_headboard_shelf,
+    "sofa-console": build_sofa_console,
+    "shoe-bench": build_shoe_bench,
 })
 
 

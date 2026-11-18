@@ -3,13 +3,29 @@
 import { SITE } from "@/config/site";
 import { ROOMS } from "@/config/rooms";
 import { useShowroom } from "@/lib/store";
+import { restStep, stepStart } from "@/config/journey";
+import { scrollToVh } from "@/lib/journey";
+import type { RoomId } from "@/config/rooms";
+
+/** Scrolls the journey to a room (closing an open piece first). */
+function visitRoom(room: RoomId) {
+  const s = useShowroom.getState();
+  const go = () => scrollToVh(stepStart(restStep(room)) + 0.05);
+  if (s.view === "product") {
+    s.backToRoom();
+    setTimeout(go, 2400);
+  } else go();
+}
+
+const contactUrl = SITE.whatsappNumber
+  ? `https://wa.me/${SITE.whatsappNumber}?text=${encodeURIComponent(`Hello ${SITE.brand}, I would like some information about the collection.`)}`
+  : null;
 
 /** Brand and the room selector (top on desktop, bottom bar on mobile). */
 export function Header() {
   const entered = useShowroom((s) => s.entered);
   const room = useShowroom((s) => s.room);
   const view = useShowroom((s) => s.view);
-  const goToRoom = useShowroom((s) => s.goToRoom);
 
   const nav = (
     <ol className="flex items-center gap-1 md:gap-2">
@@ -17,7 +33,7 @@ export function Header() {
         <li key={r.id}>
           <button
             type="button"
-            onClick={() => goToRoom(r.id)}
+            onClick={() => visitRoom(r.id)}
             aria-current={r.id === room ? "page" : undefined}
             className="group/room flex items-baseline gap-2 px-3 py-2 text-[12.5px] text-charcoal/55 transition-colors duration-500 hover:text-ink aria-[current=page]:text-ink"
           >
@@ -44,9 +60,19 @@ export function Header() {
         </a>
         <nav
           aria-label="Rooms"
-          className="pointer-events-auto -mt-2 hidden rounded-full bg-paper/70 px-2 backdrop-blur-md md:block"
+          className="pointer-events-auto -mt-2 hidden items-center gap-2 md:flex"
         >
-          {nav}
+          <div className="rounded-full bg-paper/70 px-2 backdrop-blur-md">{nav}</div>
+          {contactUrl && (
+            <a
+              href={contactUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="rounded-full bg-gold px-5 py-2.5 text-[12px] tracking-[0.04em] text-paper transition-colors duration-300 hover:bg-[#9a7744]"
+            >
+              Contact
+            </a>
+          )}
         </nav>
       </header>
 

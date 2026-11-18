@@ -11,6 +11,8 @@ import { RoomId, placement } from "@/config/rooms";
 import { useShowroom } from "@/lib/store";
 import { FurnitureModel } from "../furniture/FurnitureModel";
 import { runtime } from "./runtime";
+import { JOURNEY } from "@/config/journey";
+import { useJourney } from "@/lib/journey";
 
 /**
  * A real-time product, standing exactly where its Cycles twin stands. Hidden
@@ -66,7 +68,8 @@ export function LiveProduct({ room, productId }: { room: RoomId; productId: Prod
     if (turn.current) turn.current.rotation.y = active ? runtime.rotation : 0;
   });
 
-  const inRoom = view === "room" && entered && !switching;
+  const resting = useJourney((s) => JOURNEY[s.step].kind === "rest" && s.cover < 0.05);
+  const inRoom = view === "room" && entered && !switching && resting;
 
   return (
     <group position={place.position} rotation-y={place.rotation_y} name={productId}>

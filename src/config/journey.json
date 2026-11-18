@@ -1,0 +1,18 @@
+{
+  "bedroom": {
+    "landscape": 60,
+    "portrait": 60
+  },
+  "exterior": {
+    "landscape": 72,
+    "portrait": 72
+  },
+  "living": {
+    "landscape": 60,
+    "portrait": 60
+  },
+  "storage": {
+    "landscape": 60,
+    "portrait": 60
+  }
+}

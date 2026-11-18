@@ -5,6 +5,7 @@ import gsap from "gsap";
 import { useProgress } from "@react-three/drei";
 import { SITE } from "@/config/site";
 import { useShowroom } from "@/lib/store";
+import { useJourney } from "@/lib/journey";
 
 const MIN_DURATION = 1.8; // seconds — enough for the brand moment, never longer
 
@@ -14,7 +15,9 @@ const MIN_DURATION = 1.8; // seconds — enough for the brand moment, never long
  * lifts away and hands over to the intro camera move.
  */
 export function Loader() {
-  const sceneReady = useShowroom((s) => s.sceneReady);
+  const stageReady = useShowroom((s) => s.sceneReady);
+  const journeyReady = useJourney((s) => s.ready);
+  const sceneReady = stageReady && journeyReady;
   const enter = useShowroom((s) => s.enter);
   const { progress, active } = useProgress();
   const root = useRef<HTMLDivElement>(null);

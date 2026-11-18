@@ -5,11 +5,14 @@ import type { ProductId } from "@/config/products";
 import { ROOM_MAP } from "@/config/rooms";
 import { SITE } from "@/config/site";
 import { useShowroom } from "@/lib/store";
+import { JOURNEY } from "@/config/journey";
+import { useJourney } from "@/lib/journey";
 
 /** Room view copy: the room, the pieces in it, and the way in to each one. */
 export function RoomCopy() {
   const room = useShowroom((s) => ROOM_MAP[s.room]);
-  const visible = useShowroom((s) => s.entered && s.view === "room" && !s.switching);
+  const resting = useJourney((s) => JOURNEY[s.step].kind === "rest" && s.cover < 0.05);
+  const visible = useShowroom((s) => s.entered && s.view === "room" && !s.switching) && resting;
 
   const reveal = (delay: number) => ({
     className:
@@ -21,7 +24,7 @@ export function RoomCopy() {
     <section
       key={room.id}
       data-on={visible || undefined}
-      className="group pointer-events-none absolute inset-x-5 bottom-[76px] z-20 md:inset-x-10 md:bottom-12 md:flex md:items-end md:justify-between md:gap-10"
+      className="group pointer-events-none absolute inset-x-5 bottom-[76px] z-20 md:inset-x-10 md:bottom-32 md:flex md:items-end md:justify-between md:gap-10"
     >
       <div className="max-w-[34rem]">
         <span {...reveal(150)}>

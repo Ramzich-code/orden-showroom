@@ -36,6 +36,8 @@ interface ShowroomState {
   setReducedMotion: (r: boolean) => void;
   nextRoom: (dir: 1 | -1) => void;
   goToRoom: (room: RoomId) => void;
+  /** Room change hidden behind the journey frames: no dissolve. */
+  enterRoomCovered: (room: RoomId) => void;
   finishSwitch: () => void;
   /** Opens a product of the current room (default: the selected one). */
   openProduct: (id?: ProductId) => void;
@@ -82,6 +84,10 @@ export const useShowroom = create<ShowroomState>((set, get) => ({
   goToRoom: (room) => {
     if (room === get().room && !get().switching) return;
     set({ room, switching: true, view: "room", exploded: false, zoom: 1, hovered: null, orderOpen: false, selected: ROOM_MAP[room].productIds[0] });
+  },
+  enterRoomCovered: (room) => {
+    if (room === get().room) return;
+    set({ room, switching: false, view: "room", exploded: false, zoom: 1, hovered: null, orderOpen: false, selected: ROOM_MAP[room].productIds[0] });
   },
   finishSwitch: () => set({ switching: false }),
   openProduct: (id) => set((s) => ({ view: "product", hovered: null, selected: id ?? s.selected })),

@@ -8,6 +8,10 @@ import { Header } from "./ui/Header";
 import { RoomCopy } from "./ui/RoomCopy";
 import { ProductPanel } from "./ui/ProductPanel";
 import { StaticFallback } from "./ui/StaticFallback";
+import { ScrollJourney } from "./journey/ScrollJourney";
+import { JourneyTitles } from "./journey/JourneyTitles";
+import { Hud } from "./journey/Hud";
+import { Finale } from "./journey/Finale";
 
 // The WebGL bundle (three, fiber, drei) is split out and loaded on the client only.
 const Stage = dynamic(() => import("@/three/Stage"), { ssr: false });
@@ -44,6 +48,7 @@ export function ShowroomApp() {
   if (support === "none") return <StaticFallback />;
 
   return (
+    <>
     <main className="fixed inset-0 overflow-hidden bg-ivory">
       {support === "webgl" && <Stage />}
 
@@ -51,10 +56,15 @@ export function ShowroomApp() {
       <div className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-ivory/55 to-transparent" />
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(80%_55%_at_0%_100%,rgb(244_240_232/0.8),transparent_70%)] md:bg-[radial-gradient(50%_55%_at_0%_100%,rgb(244_240_232/0.7),transparent_75%)]" />
 
+      <JourneyTitles />
+      <Finale />
       <Header />
       <RoomCopy />
+      <Hud />
       <ProductPanel />
       <Loader />
     </main>
+    {support === "webgl" && <ScrollJourney />}
+    </>
   );
 }

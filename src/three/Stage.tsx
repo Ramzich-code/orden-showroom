@@ -7,12 +7,15 @@ import { Environment, PerformanceMonitor, useGLTF } from "@react-three/drei";
 import { PRODUCTS } from "@/config/products";
 import { Orientation, ROOMS, ROOM_MAP, RoomId, Shot, aspectOf, hasPortrait, probeUrl, roomAsset } from "@/config/rooms";
 import { useShowroom } from "@/lib/store";
+import { scrollToVh } from "@/lib/journey";
+import { restStep, stepStart } from "@/config/journey";
 import { preloadMaterials } from "./materials";
 import { Backdrop, preloadRoom } from "./stage/Backdrop";
 import { LiveProduct } from "./stage/LiveProduct";
 import { ShotRig } from "./stage/ShotRig";
 import { runtime } from "./stage/runtime";
 import { productFocus } from "./stage/focus";
+import { JourneyFrames } from "./stage/JourneyFrames";
 
 const PANEL_W = 420; // desktop product panel width (px), see ProductPanel
 const DISSOLVE_MS = 900;
@@ -92,6 +95,11 @@ export default function Stage() {
   // room switch: freeze the old still over the stage, swap underneath, dissolve
   useEffect(() => {
     if (room === shown) return;
+    // behind the journey frames: swap silently
+    if (!useShowroom.getState().switching) {
+      setShown(room);
+      return;
+    }
     if (lastBox.current) setGhost({ ...lastBox.current, on: true });
     useShowroom.getState().setSceneReady(false);
     setSettle(true);
@@ -143,11 +151,8 @@ export default function Stage() {
     if (!el) return;
     const pointers = new Map<number, { x: number; y: number }>();
     let pinch = 0;
-    let swipe: { x: number; y: number; id: number } | null = null;
     const isProduct = () => useShowroom.getState().view === "product" && !useShowroom.getState().switching;
     const down = (e: PointerEvent) => {
-      // room view, touch: horizontal swipe changes room
-      if (!isProduct() && e.pointerType !== "mouse") swipe = { x: e.clientX, y: e.clientY, id: e.pointerId };
       if (!isProduct()) return;
       pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
       if (pointers.size === 2) {
@@ -173,13 +178,6 @@ export default function Stage() {
       }
     };
     const up = (e: PointerEvent) => {
-      if (swipe && swipe.id === e.pointerId) {
-        const dx = e.clientX - swipe.x;
-        const dy = e.clientY - swipe.y;
-        const s = useShowroom.getState();
-        if (Math.abs(dx) > 70 && Math.abs(dy) < 60 && s.view === "room" && !s.switching) s.nextRoom(dx < 0 ? 1 : -1);
-        swipe = null;
-      }
       pointers.delete(e.pointerId);
       if (pointers.size < 2) pinch = 0;
     };
@@ -218,8 +216,10 @@ export default function Stage() {
         else if (e.key === "-") s.setZoom(s.zoom / 1.3);
         else return;
       } else {
-        if (e.key === "ArrowRight") s.nextRoom(1);
-        else if (e.key === "ArrowLeft") s.nextRoom(-1);
+        const ids = ROOMS.map((r) => r.id);
+        const i = ids.indexOf(s.room);
+        if (e.key === "ArrowRight" && i < ids.length - 1) scrollToVh(stepStart(restStep(ids[i + 1])) + 0.05);
+        else if (e.key === "ArrowLeft" && i > 0) scrollToVh(stepStart(restStep(ids[i - 1])) + 0.05);
         else return;
       }
       e.preventDefault();
@@ -236,7 +236,7 @@ export default function Stage() {
         ref={frameRef}
         data-product={view === "product" || undefined}
         className="absolute transition-transform duration-[1600ms] ease-[var(--ease-cine)] data-product:cursor-grab data-product:active:cursor-grabbing"
-        style={{ width: fw, height: fh, transform: `translate3d(${left}px, ${top}px, 0)`, touchAction: "none" }}
+        style={{ width: fw, height: fh, transform: `translate3d(${left}px, ${top}px, 0)`, touchAction: view === "product" ? "none" : "pan-y" }}
       >
         <div
           className="absolute inset-0 origin-center"
@@ -245,6 +245,7 @@ export default function Stage() {
             transition: settle ? "none" : "transform 2600ms cubic-bezier(0.22, 0.61, 0.24, 1)",
           }}
         >
+        <JourneyFrames portrait={orient === "portrait"} />
         <Canvas
           dpr={Math.min(dpr, typeof window === "undefined" ? 1 : window.devicePixelRatio)}
           camera={{ fov: 40, near: 0.05, far: 60, position: [0, 1.5, 4] }}

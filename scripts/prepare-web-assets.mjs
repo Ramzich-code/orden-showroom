@@ -33,7 +33,7 @@ async function rooms() {
     const src = join(FINAL, room);
     const out = join(ROOT, "public", "rooms", room);
     mkdirSync(out, { recursive: true });
-    const cams = readdirSync(src).filter((f) => f.endsWith("_beauty.png")).map((f) => f.replace(/_beauty.png$/, ""));
+    const cams = readdirSync(src).filter((f) => f.endsWith("_beauty.png")).map((f) => f.replace(/_beauty\.png$/, ""));
     for (const cam of cams) {
       const shot = slug(cam);
       const portrait = cam.endsWith("_p");
@@ -50,11 +50,37 @@ async function rooms() {
         .webp({ lossless: true })
         .toFile(join(out, `${shot}-depth.webp`));
     }
-    for (const f of readdirSync(src).filter((f) => /^probe-.*.hdr$/.test(f))) copyFileSync(join(src, f), join(out, f));
+    for (const f of readdirSync(src).filter((f) => /^probe-.*\.hdr$/.test(f))) copyFileSync(join(src, f), join(out, f));
     const scene = JSON.parse(readFileSync(join(src, `${room}.json`), "utf8"));
     writeFileSync(join(ROOT, "src", "config", "scenes", `${room}.json`), JSON.stringify(scene, null, 2) + "\n");
     console.log("[assets] room", room);
   }
+}
+
+/* ---------------------------------------------------------------- journey */
+
+// Scroll journey frame sequences (blender/journey/journey.py) -> public/journey/<segment>[-p]/NNN.webp
+// and src/config/journey.json (frame counts per segment and orientation).
+const JOURNEY = join(ROOT, "blender", "renders", "journey");
+async function journey() {
+  const manifest = {};
+  for (const dir of readdirSync(JOURNEY, { withFileTypes: true }).filter((d) => d.isDirectory())) {
+    const frames = readdirSync(join(JOURNEY, dir.name)).filter((f) => /^f_\d+\.png$/.test(f)).sort();
+    if (!frames.length) continue;
+    const portrait = dir.name.endsWith("-p");
+    const out = join(ROOT, "public", "journey", dir.name);
+    mkdirSync(out, { recursive: true });
+    for (let i = 0; i < frames.length; i++) {
+      await sharp(join(JOURNEY, dir.name, frames[i]))
+        .resize({ width: portrait ? 720 : 1280, withoutEnlargement: true })
+        .webp({ quality: 72, effort: 5 })
+        .toFile(join(out, `${String(i + 1).padStart(3, "0")}.webp`));
+    }
+    const seg = dir.name.replace(/-p$/, "");
+    manifest[seg] = { ...(manifest[seg] ?? {}), [portrait ? "portrait" : "landscape"]: frames.length };
+    console.log("[assets] journey", dir.name, frames.length, "frames");
+  }
+  writeFileSync(join(ROOT, "src", "config", "journey.json"), `${JSON.stringify(manifest, null, 2)}\n`);
 }
 
 /* ----------------------------------------------------------------- models */
@@ -190,3 +216,4 @@ const only = process.argv.slice(2);
 if (!only.length || only.includes("rooms")) await rooms();
 if (!only.length || only.includes("textures")) await textures();
 if (!only.length || only.includes("models")) await models();
+if (!only.length || only.includes("journey")) await journey();

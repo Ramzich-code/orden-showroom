@@ -438,14 +438,46 @@ def build_headboard_shelf(col):
 
 # --------------------------------------------------------------------------- #
 # PRODUCT 05 — Mjuk Sofa (living)
-# Reference (client photo): a low, straight three-seater in cream boucle;
-# thick rounded "pill" arms as high as the back, two deep seat cushions and
-# two soft back cushions, sitting almost on the floor on a hidden recessed
-# plinth.
+# Reference (client photo, 2026-11-18): a long, low "cloud" sofa in cream
+# boucle where every volume is pillowy, with no flat planes: very thick arms
+# that swell outward towards the top and sit level with the back, two
+# puffy back cushions, two deep seat cushions whose rolled front runs almost
+# to the floor (no visible base band).
 # --------------------------------------------------------------------------- #
 
-SOFA = dict(W=2.30, D=0.95, H=0.76, arm_w=0.27, arm_h=0.72, back_d=0.20, back_h=0.62,
-            base_z=0.04, base_h=0.15, seat_t=0.25, back_cushion_t=0.21, plinth_h=0.04, plinth_inset=0.06)
+def superellipsoid_bmesh(size, e_plan, e_vert, u=64, v=32, flare=0.0, crown=0.0, slope=0.0):
+    """Pillowy volume: a superellipsoid (e -> 0 boxy, e = 1 ellipsoid).
+    flare widens it in X towards the top (swelling arms); crown puffs the
+    middle of the top/bottom faces a little (filled cushions); slope lowers
+    the top towards the front (-Y), like a rolled arm."""
+    bm = bmesh.new()
+    bmesh.ops.create_uvsphere(bm, u_segments=u, v_segments=v, radius=1.0)
+    rx, ry, rz = size[0] / 2, size[1] / 2, size[2] / 2
+
+    def sp(c, e):
+        return math.copysign(abs(c) ** e, c)
+
+    for vert in bm.verts:
+        x, y, z = vert.co
+        th = math.asin(max(-1.0, min(1.0, z)))
+        ph = math.atan2(y, x)
+        ct, st = math.cos(th), math.sin(th)
+        X = rx * sp(ct, e_vert) * sp(math.cos(ph), e_plan)
+        Y = ry * sp(ct, e_vert) * sp(math.sin(ph), e_plan)
+        Z = rz * sp(st, e_vert)
+        if flare:
+            X *= 1.0 + flare * max(0.0, Z / rz) ** 1.5
+        if slope and Z > 0:
+            Z -= slope * rz * max(0.0, -Y / ry) * (Z / rz)
+        if crown:
+            r = min(1.0, (X / rx) ** 2 + (Y / ry) ** 2)
+            Z += math.copysign(crown * rz * (1.0 - r), Z) if abs(Z) > 0.6 * rz else 0.0
+        vert.co = Vector((X, Y, Z))
+    bm.normal_update()
+    return bm
+
+
+SOFA = dict(W=2.60, D=1.00, arm_w=0.27, arm_h=0.68, seat_top=0.42, back_top=0.76)
 
 
 def build_sofa(col):
@@ -454,37 +486,29 @@ def build_sofa(col):
     W, D, aw, ah = c["W"], c["D"], c["arm_w"], c["arm_h"]
     front = -D / 2
     inner_w = W - 2 * aw
-    # arms: soft pills, round in plan at the front and over the top
+    # arms: thick pillows, round in plan and over the top, swelling outward
     for name, x in (("arm-l", -W / 2 + aw / 2), ("arm-r", W / 2 - aw / 2)):
-        bm = slab_bmesh((aw, D, ah - c["base_z"]), aw * 0.46, aw * 0.42, corner_segments=12, edge_segments=10,
-                        bottom_edge=0.02)
-        make_object(name, bm, (x, 0, c["base_z"] + (ah - c["base_z"]) / 2), root, "fabric", "x", col)
-    # back frame behind the cushions
-    bh = c["back_h"] - c["base_z"]
-    make_object("back", slab_bmesh((inner_w + 0.02, c["back_d"], bh), 0.05, 0.06, corner_segments=8, edge_segments=8,
-                                   bottom_edge=0.02),
-                (0, D / 2 - c["back_d"] / 2, c["base_z"] + bh / 2), root, "fabric", "x", col)
-    # base under the seat cushions
-    make_object("base", slab_bmesh((inner_w + 0.02, D - c["back_d"] + 0.02, c["base_h"]), 0.04, 0.035,
-                                   corner_segments=6, edge_segments=6, bottom_edge=0.02),
-                (0, front + (D - c["back_d"]) / 2, c["base_z"] + c["base_h"] / 2), root, "fabric", "x", col)
-    # two seat cushions and two back cushions
-    seat_z = c["base_z"] + c["base_h"]
-    seat_d = D - c["back_d"] - 0.01
-    cw = inner_w / 2 - 0.005
+        bm = superellipsoid_bmesh((aw, D, ah), 0.55, 0.7, flare=0.05, slope=0.22)
+        make_object(name, bm, (x, 0, ah / 2 + 0.005), root, "fabric", "x", col)
+    # hidden frame behind the back cushions
+    make_object("back", superellipsoid_bmesh((inner_w + 0.06, 0.24, 0.60), 0.3, 0.35),
+                (0, D / 2 - 0.13, 0.31), root, "fabric", "x", col)
+    # low recessed base, hidden behind the rolled seat fronts
+    make_object("base", superellipsoid_bmesh((inner_w, D - 0.40, 0.10), 0.2, 0.3),
+                (0, 0.05, 0.07), root, "fabric", "x", col)
+    # seat cushions: deep, the rolled front running almost to the floor
+    cw = inner_w / 2 + 0.025
+    seat_d = D - 0.18
+    seat_h = c["seat_top"] - 0.03
     for name, x in (("seat-l", -inner_w / 4), ("seat-r", inner_w / 4)):
-        make_object(name, slab_bmesh((cw, seat_d, c["seat_t"]), 0.07, 0.07, corner_segments=10, edge_segments=10),
-                    (x, front + seat_d / 2 + 0.005, seat_z + c["seat_t"] / 2 - 0.01), root, "fabric", "x", col)
-    bct = c["back_cushion_t"]
-    back_top = c["H"]
-    bch = back_top - (seat_z + c["seat_t"] - 0.03)
+        bm = superellipsoid_bmesh((cw, seat_d, seat_h), 0.2, 0.38, crown=0.04)
+        make_object(name, bm, (x, front + seat_d / 2 + 0.01, 0.03 + seat_h / 2), root, "fabric", "x", col)
+    # back cushions: big, puffy, leaning back, tops level with the arms
+    bh = c["back_top"] - (c["seat_top"] - 0.08)
     for name, x in (("back-cushion-l", -inner_w / 4), ("back-cushion-r", inner_w / 4)):
-        bm = slab_bmesh((cw, bct, bch), 0.08, 0.09, corner_segments=10, edge_segments=10)
-        o = make_object(name, bm, (x, D / 2 - c["back_d"] - bct / 2 + 0.04, back_top - bch / 2), root, "fabric", "x", col)
-        o.rotation_euler = (math.radians(-9), 0, 0)      # leaning back slightly
-    pi = c["plinth_inset"]
-    make_object("plinth", panel_bmesh((W - 2 * pi, D - 2 * pi, c["plinth_h"]), 0.001),
-                (0, 0, c["plinth_h"] / 2), root, "base", "x", col)
+        bm = superellipsoid_bmesh((cw, 0.26, bh), 0.25, 0.4, crown=0.0)
+        o = make_object(name, bm, (x, D / 2 - 0.27, c["back_top"] - bh / 2), root, "fabric", "x", col)
+        o.rotation_euler = (math.radians(-10), 0, 0)
     return root
 
 

@@ -22,8 +22,9 @@ import room_props as rp  # noqa: E402
 
 
 def living():
-    """SCENE 01 — Living room, staged like the coffee-table photograph: large
-    cream sofa with a rounded chaise, light natural rug, walnut panel wall."""
+    """SCENE 01 — Living room, staged like the coffee-table photograph: the
+    Mjuk boucle sofa against the walnut panel wall, light natural rug, the Lune
+    coffee table in front."""
     col = rk.new_scene()
     W, D, H = 6.4, 5.0, 2.8
     win = dict(side="right", y0=-1.6, y1=2.0, z0=0.02, z1=H - 0.02)
@@ -32,14 +33,16 @@ def living():
     rk.window_fill(W, win, energy=380)
     rk.ceiling_bounce(W, D, H, energy=60)
     rp.panel_wall(col, -W / 2, 1.6, 0.0, H, D / 2)
-    rp.sectional_sofa(col, (-0.6, D / 2 - 0.55, 0), length=3.4, depth=1.0, chaise=1.6)
+    sofa_y = D / 2 - 0.08 - rk.bp.SOFA["D"] / 2       # 8 cm off the panel wall
+    rk.place_product("sofa", (-0.55, sofa_y, 0))
     rk.rug(col, (4.0, 3.0), (-0.45, 0.8))            # natural cream wool: separates sofa, rug and table
     rk.place_product("coffee-table", (-0.6, 0.3, 0))
     top_z = rk.bp.coffee_top_z()
     rk.import_gltf("ceramic_vase_02/ceramic_vase_02_2k.gltf", (-0.78, 0.45, top_z), 1.0, 0.3, "decor_vase")
     rp.table_styling(col, top_z, -0.6, 0.3)
     cams = [rk.camera("cam_room", (-2.35, -2.3, 1.75), (-0.45, 0.95, 0.35), 30),
-            rk.camera("cam_product", (-2.45, -1.75, 1.45), (-0.6, 0.3, 0.12), 36)]
+            rk.camera("cam_product", (-2.45, -1.75, 1.45), (-0.6, 0.3, 0.12), 36),
+            rk.camera("cam_product_sofa", (0.75, -1.05, 1.7), (-0.55, sofa_y, 0.42), 30)]
     return cams
 
 
@@ -61,7 +64,8 @@ def bedroom(bedside_dims=None):
         rk.ceiling_bounce(W, D, H, energy=35)
         rp.sheer_curtain(col, -W / 2 + 0.14, -1.0, 2.1, H - 0.04)
         rp.channel_headboard(col, -1.55, W / 2 - 0.02, yw, height=1.15)
-        rp.led_cove(col, -1.55, W / 2 - 0.02, yw, 1.19, strength=5.0)
+        shelf_d = rk.bp.HEADBOARD_SHELF["D"]
+        rk.place_product("headboard-shelf", (1.0, yw - shelf_d / 2 - 0.002, 0))   # its LEDs wash the wall
         rp.luxe_bed(col, (1.0, yw - 0.15 - 1.05, 0))
         bw, bd = rk.bp.BEDSIDE["W"], rk.bp.BEDSIDE["D"]
         bedside_y = yw - 0.15 - bd / 2 - 0.01
@@ -72,7 +76,8 @@ def bedroom(bedside_dims=None):
         rp.art_frame(col, 1.55, 1.88, 1.45, 0.95, yw, mat="travertine")
         rk.rug(col, (2.2, 2.8), (-0.35, 0.55))
         cams = [rk.camera("cam_room", (-1.15, -1.95, 1.2), (0.3, yw, 0.95), 28),
-                rk.camera("cam_product", (-1.25, -0.35, 1.1), (bedside_x + 0.25, bedside_y, 0.36), 32)]
+                rk.camera("cam_product", (-1.25, -0.35, 1.1), (bedside_x + 0.25, bedside_y, 0.36), 32),
+                rk.camera("cam_product_headboard-shelf", (0.2, 0.55, 1.85), (1.0, yw - 0.08, 1.12), 26)]
         return cams
     finally:
         rk.bp.BEDSIDE.clear()
@@ -83,7 +88,7 @@ def storage():
     """SCENE 03 — Dressing room around ONE standalone Fjell wardrobe (not built
     in): it stands free, slightly off the wall, with space on both sides. Around
     it: marble panel with vanity and lit round mirror, pouf, leaning floor
-    mirror, dark bench on a striped rug, linear ceiling lights, sheers."""
+    mirror, the Sko shoe bench on a striped rug, linear ceiling lights, sheers."""
     col = rk.new_scene()
     W, D, H = 5.2, 4.4, 2.7
     yw = D / 2
@@ -102,10 +107,11 @@ def storage():
     rp.pouf(col, (1.6, 1.35, 0))
     rk.floor_mirror(col, (-1.85, yw - 0.05, 0), w=0.6, h=1.7)
     rp.striped_rug(col, (2.6, 1.6), (-0.45, 0.55))
-    rp.dark_bench(col, (-1.55, 0.35, 0), length=1.2, rot_z=1.5708)   # to the side: legs of the wardrobe stay visible
+    rk.place_product("shoe-bench", (-1.6, 0.35, 0), rot_z=1.5708)    # to the side, bays facing the room
     rp.ceiling_slots(col, [(-1.6, -0.4), (0.9, 2.0)], 0.6, H)
     cams = [rk.camera("cam_room", (0.55, -2.05, 1.35), (-0.1, yw, 1.05), 26),
-            rk.camera("cam_product", (1.55, -1.05, 1.2), (fx + 0.05, fy, 0.98), 28)]
+            rk.camera("cam_product", (1.55, -1.05, 1.2), (fx + 0.05, fy, 0.98), 28),
+            rk.camera("cam_product_shoe-bench", (0.45, -1.25, 1.15), (-1.6, 0.35, 0.25), 30)]
     return cams
 
 

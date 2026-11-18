@@ -437,32 +437,54 @@ def build_headboard_shelf(col):
 
 
 # --------------------------------------------------------------------------- #
-# PRODUCT 05 — Rygg Sofa Console (living)
-# Reference: a long, narrow solid-wood console standing behind the sofa: a
-# thick top with softly rounded ends on three slab legs, a flush socket and
-# USB module in the top and a cable grommet high in the end leg.
+# PRODUCT 05 — Mjuk Sofa (living)
+# Reference (client photo): a low, straight three-seater in cream boucle;
+# thick rounded "pill" arms as high as the back, two deep seat cushions and
+# two soft back cushions, sitting almost on the floor on a hidden recessed
+# plinth.
 # --------------------------------------------------------------------------- #
 
-SOFA_CONSOLE = dict(L=1.60, D=0.24, H=0.76, top_t=0.035, leg_w=0.11, leg_d=0.20, leg_inset=0.03)
+SOFA = dict(W=2.30, D=0.95, H=0.76, arm_w=0.27, arm_h=0.72, back_d=0.20, back_h=0.62,
+            base_z=0.04, base_h=0.15, seat_t=0.25, back_cushion_t=0.21, plinth_h=0.04, plinth_inset=0.06)
 
 
-def build_sofa_console(col):
-    c = SOFA_CONSOLE
-    root = make_root("sofa-console", col)
-    L, D, H, tt = c["L"], c["D"], c["H"], c["top_t"]
-    make_object("top", slab_bmesh((L, D, tt), 0.03, 0.006, corner_segments=8, edge_segments=4),
-                (0, 0, H - tt / 2), root, "body", "x", col)
-    leg_h = H - tt
-    xs = {"leg-l": -L / 2 + c["leg_inset"] + c["leg_w"] / 2,
-          "leg-m": -0.08,
-          "leg-r": L / 2 - c["leg_inset"] - c["leg_w"] / 2}
-    for name, x in xs.items():
-        make_object(name, panel_bmesh((c["leg_w"], c["leg_d"], leg_h), 0.004, 3), (x, 0.005, leg_h / 2), root, "body", "z", col)
-    make_object("sockets", socket_plate_bmesh(3, pitch=0.065, plate=(0.065, 0.06), usb=True),
-                (L / 2 - 0.30, 0.01, H + 0.002), root, "socket", "x", col)
-    g = grommet_bmesh()
-    bmesh.ops.rotate(g, verts=g.verts, cent=(0, 0, 0), matrix=__import__("mathutils").Matrix.Rotation(math.radians(90), 3, "Y"))
-    make_object("grommet", g, (L / 2 - c["leg_inset"] + 0.003, 0.0, 0.62), root, "socket", "x", col)
+def build_sofa(col):
+    c = SOFA
+    root = make_root("sofa", col)
+    W, D, aw, ah = c["W"], c["D"], c["arm_w"], c["arm_h"]
+    front = -D / 2
+    inner_w = W - 2 * aw
+    # arms: soft pills, round in plan at the front and over the top
+    for name, x in (("arm-l", -W / 2 + aw / 2), ("arm-r", W / 2 - aw / 2)):
+        bm = slab_bmesh((aw, D, ah - c["base_z"]), aw * 0.46, aw * 0.42, corner_segments=12, edge_segments=10,
+                        bottom_edge=0.02)
+        make_object(name, bm, (x, 0, c["base_z"] + (ah - c["base_z"]) / 2), root, "fabric", "x", col)
+    # back frame behind the cushions
+    bh = c["back_h"] - c["base_z"]
+    make_object("back", slab_bmesh((inner_w + 0.02, c["back_d"], bh), 0.05, 0.06, corner_segments=8, edge_segments=8,
+                                   bottom_edge=0.02),
+                (0, D / 2 - c["back_d"] / 2, c["base_z"] + bh / 2), root, "fabric", "x", col)
+    # base under the seat cushions
+    make_object("base", slab_bmesh((inner_w + 0.02, D - c["back_d"] + 0.02, c["base_h"]), 0.04, 0.035,
+                                   corner_segments=6, edge_segments=6, bottom_edge=0.02),
+                (0, front + (D - c["back_d"]) / 2, c["base_z"] + c["base_h"] / 2), root, "fabric", "x", col)
+    # two seat cushions and two back cushions
+    seat_z = c["base_z"] + c["base_h"]
+    seat_d = D - c["back_d"] - 0.01
+    cw = inner_w / 2 - 0.005
+    for name, x in (("seat-l", -inner_w / 4), ("seat-r", inner_w / 4)):
+        make_object(name, slab_bmesh((cw, seat_d, c["seat_t"]), 0.07, 0.07, corner_segments=10, edge_segments=10),
+                    (x, front + seat_d / 2 + 0.005, seat_z + c["seat_t"] / 2 - 0.01), root, "fabric", "x", col)
+    bct = c["back_cushion_t"]
+    back_top = c["H"]
+    bch = back_top - (seat_z + c["seat_t"] - 0.03)
+    for name, x in (("back-cushion-l", -inner_w / 4), ("back-cushion-r", inner_w / 4)):
+        bm = slab_bmesh((cw, bct, bch), 0.08, 0.09, corner_segments=10, edge_segments=10)
+        o = make_object(name, bm, (x, D / 2 - c["back_d"] - bct / 2 + 0.04, back_top - bch / 2), root, "fabric", "x", col)
+        o.rotation_euler = (math.radians(-9), 0, 0)      # leaning back slightly
+    pi = c["plinth_inset"]
+    make_object("plinth", panel_bmesh((W - 2 * pi, D - 2 * pi, c["plinth_h"]), 0.001),
+                (0, 0, c["plinth_h"] / 2), root, "base", "x", col)
     return root
 
 
@@ -514,7 +536,7 @@ BUILDERS.update({
     "bedside-table": build_bedside_table,
     "wardrobe": build_wardrobe,
     "headboard-shelf": build_headboard_shelf,
-    "sofa-console": build_sofa_console,
+    "sofa": build_sofa,
     "shoe-bench": build_shoe_bench,
 })
 

@@ -23,17 +23,20 @@ import rooms  # noqa: E402
 import render_final as rf  # noqa: E402
 
 
-def probe(room, samples):
+def probe(room, samples, pid=None):
     bpy.ops.wm.open_mainfile(filepath=os.path.join(HERE, f"{room}.blend"))
     rk.preview_settings(samples=samples, res=(512, 256), exposure=0.0)
     s = bpy.context.scene
     s.use_nodes = False
-    pobs = rf.product_objects(rf.PRODUCT[room])
+    pid = pid or rf.PRODUCT[room]
+    pobs = rf.product_objects(pid)
     meshes = [o for o in pobs if o.type == "MESH"]
     lo = [min(rf.world_bbox(o)[0][i] for o in meshes) for i in range(3)]
     hi = [max(rf.world_bbox(o)[1][i] for o in meshes) for i in range(3)]
-    for o in pobs + rf.resting_on(pobs):
-        o.hide_render = True
+    for p in rf.ROOM_PRODUCTS[room]:                  # the room without any product
+        obs = rf.product_objects(p)
+        for o in obs + rf.resting_on(obs):
+            o.hide_render = True
     cd = bpy.data.cameras.new("probe")
     cd.type = "PANO"
     cd.panorama_type = "EQUIRECTANGULAR"
@@ -43,7 +46,7 @@ def probe(room, samples):
     cam.rotation_euler = (math.radians(90), 0, math.radians(-90))   # forward +X, up +Z
     s.camera = cam
     s.render.image_settings.file_format = "HDR"
-    out = os.path.abspath(os.path.join(rf.OUT, room, "probe.hdr"))
+    out = os.path.abspath(os.path.join(rf.OUT, room, f"probe-{pid}.hdr"))
     s.render.filepath = out
     bpy.ops.render.render(write_still=True)
     print("[ORDEN] probe", out, "at", tuple(round(v, 2) for v in cam.location))
@@ -54,4 +57,5 @@ if __name__ == "__main__":
     names = [a for a in args if a in rf.PRODUCT] or list(rf.PRODUCT)
     samples = next((int(a) for a in args if a.isdigit()), 128)
     for r in names:
-        probe(r, samples)
+        for p in rf.ROOM_PRODUCTS[r]:
+            probe(r, samples, p)

@@ -19,8 +19,9 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const FINAL = join(ROOT, "blender", "renders", "final");
 const ASSETS = join(ROOT, "blender", "assets");
 const ROOMS = ["living", "bedroom", "storage"];
-// 16:9 stills, and the 9:16 phone stills when they exist (portrait.py)
-const CAMS = { cam_room: "room", cam_product: "product", cam_room_p: "room-p", cam_product_p: "product-p" };
+// every Blender camera found (cam_room, cam_product, cam_product_<id>, and the
+// 9:16 phone variants *_p) -> same slug as cameraSlug() in src/config/rooms.ts
+const slug = (cam) => cam.replace(/^cam_/, "").replace(/_p$/, "-p").replace(/_/g, "-");
 const IMG_W = 2048;
 const TEX_W = 1024;
 
@@ -32,8 +33,9 @@ async function rooms() {
     const src = join(FINAL, room);
     const out = join(ROOT, "public", "rooms", room);
     mkdirSync(out, { recursive: true });
-    for (const [cam, shot] of Object.entries(CAMS)) {
-      if (!existsSync(join(src, `${cam}_beauty.png`))) continue;
+    const cams = readdirSync(src).filter((f) => f.endsWith("_beauty.png")).map((f) => f.replace(/_beauty.png$/, ""));
+    for (const cam of cams) {
+      const shot = slug(cam);
       const portrait = cam.endsWith("_p");
       for (const kind of ["beauty", "plate"]) {
         await sharp(join(src, `${cam}_${kind}.png`))
@@ -48,7 +50,7 @@ async function rooms() {
         .webp({ lossless: true })
         .toFile(join(out, `${shot}-depth.webp`));
     }
-    copyFileSync(join(src, "probe.hdr"), join(out, "probe.hdr"));
+    for (const f of readdirSync(src).filter((f) => /^probe-.*.hdr$/.test(f))) copyFileSync(join(src, f), join(out, f));
     const scene = JSON.parse(readFileSync(join(src, `${room}.json`), "utf8"));
     writeFileSync(join(ROOT, "src", "config", "scenes", `${room}.json`), JSON.stringify(scene, null, 2) + "\n");
     console.log("[assets] room", room);
@@ -98,6 +100,14 @@ const TEXTURES = {
     normal: "walnut_veneer_nor_gl_4k.jpg",
     grade: { hue: 0.49, sat: 0.95, val: 0.23 },
     roughRange: [0.38, 0.62],
+  },
+  boucle: {
+    dir: "curly_teddy_natural",
+    color: "curly_teddy_natural_diff_4k.jpg",
+    rough: "curly_teddy_natural_rough_4k.jpg",
+    normal: "curly_teddy_natural_nor_gl_4k.jpg",
+    grade: { hue: 0.5, sat: 0.35, val: 0.9, tint: [0.86, 0.77, 0.64] },   // "boucle_oat" in materials.py
+    roughRange: [0.85, 1.0],
   },
   oak: {
     dir: "oak_veneer_02",

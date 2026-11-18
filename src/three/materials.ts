@@ -21,9 +21,12 @@ export type MaterialKey =
   | "greige"
   | "base"
   | "metal"
-  | "interior";
+  | "interior"
+  | "boucle"
+  | "socket"
+  | "light";
 
-type Scanned = "walnut" | "oak" | "travertine" | "marble";
+type Scanned = "walnut" | "oak" | "travertine" | "marble" | "boucle";
 
 /** Blender Mapping node: scale 1/tile, rotation about the UV origin. */
 const SCAN: Record<Scanned, { tile: number; rot: number; normal: number }> = {
@@ -31,6 +34,7 @@ const SCAN: Record<Scanned, { tile: number; rot: number; normal: number }> = {
   marble: { tile: 1.4, rot: 0.35, normal: 0.3 },
   walnut: { tile: 1.1, rot: Math.PI / 2, normal: 0.5 },
   oak: { tile: 1.1, rot: 0, normal: 0.5 },
+  boucle: { tile: 0.32, rot: 0, normal: 0.9 },
 };
 
 /** Matte lacquers: display colour picked from the references, roughness. */
@@ -87,6 +91,7 @@ function make(key: MaterialKey): THREE.Material {
     case "walnut":
     case "oak":
     case "travertine":
+    case "boucle":
     case "marble": {
       const m = new THREE.MeshPhysicalMaterial({
         map: scanTexture(key, "color"),
@@ -95,7 +100,11 @@ function make(key: MaterialKey): THREE.Material {
         normalMap: scanTexture(key, "normal"),
         normalScale: new THREE.Vector2(SCAN[key].normal, SCAN[key].normal),
       });
-      if (key === "marble") {
+      if (key === "boucle") {
+        m.sheen = 0.6;
+        m.sheenRoughness = 0.8;
+        m.sheenColor = new THREE.Color(0.95, 0.9, 0.82);
+      } else if (key === "marble") {
         m.clearcoat = 0.5;
         m.clearcoatRoughness = 0.12;
       } else if (key === "walnut" || key === "oak") {
@@ -122,6 +131,15 @@ function make(key: MaterialKey): THREE.Material {
       return new THREE.MeshStandardMaterial({ color: new THREE.Color(0.018, 0.016, 0.015), roughness: 0.5 });
     case "metal":
       return new THREE.MeshStandardMaterial({ color: new THREE.Color(0.62, 0.6, 0.57), metalness: 1, roughness: 0.3 });
+    case "socket":
+      return new THREE.MeshStandardMaterial({ color: new THREE.Color(0.028, 0.028, 0.03), roughness: 0.42 });
+    case "light":
+      return new THREE.MeshStandardMaterial({
+        color: new THREE.Color(0.95, 0.9, 0.82),
+        emissive: new THREE.Color(1.0, 0.72, 0.42),
+        emissiveIntensity: 4,
+        roughness: 0.3,
+      });
     case "interior":
       return new THREE.MeshStandardMaterial({ color: new THREE.Color(0.62, 0.52, 0.38), roughness: 0.65 });
   }
@@ -138,6 +156,9 @@ export function getMaterialByKey(key: MaterialKey): THREE.Material {
   return m;
 }
 
+/** Fixed roles of the 2026-11-18 pieces (same as FIXED_ROLE in materials.py). */
+const FIXED: Partial<Record<MaterialRole, MaterialKey>> = { fabric: "boucle", socket: "socket", light: "light" };
+
 /** Same mapping as resolve() in blender/products/materials.py. */
 export function resolveMaterialKey(product: Product, finish: FinishId, role: MaterialRole): MaterialKey {
   switch (role) {
@@ -146,7 +167,7 @@ export function resolveMaterialKey(product: Product, finish: FinishId, role: Mat
     case "accent":
       return finish === "signature" ? "walnut" : finish === "oak" ? "black" : "oak";
     default:
-      return role;
+      return FIXED[role] ?? (role as MaterialKey);
   }
 }
 
@@ -185,5 +206,5 @@ export function getMaterial(product: Product, finish: FinishId, role: MaterialRo
 
 /** Starts the texture downloads early (used while the loader is up). */
 export function preloadMaterials() {
-  (["walnut", "oak", "travertine", "marble"] as const).forEach((k) => getMaterialByKey(k));
+  (["walnut", "oak", "travertine", "marble", "boucle"] as const).forEach((k) => getMaterialByKey(k));
 }

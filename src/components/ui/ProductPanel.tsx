@@ -1,6 +1,6 @@
 "use client";
 
-import { FINISH_ORDER, PRODUCT_MAP, formatPrice, getFinish } from "@/config/products";
+import { PRODUCT_MAP, finishesOf, formatPrice, getFinish } from "@/config/products";
 import { ROOM_MAP } from "@/config/rooms";
 import { useShowroom, ZOOM_RANGE } from "@/lib/store";
 import { whatsappEnabled, whatsappOrderUrl } from "@/lib/whatsapp";
@@ -11,13 +11,15 @@ import { whatsappEnabled, whatsappOrderUrl } from "@/lib/whatsapp";
  * PANEL_W in Stage), bottom sheet on mobile.
  */
 export function ProductPanel() {
-  const productId = useShowroom((s) => ROOM_MAP[s.room].productId);
+  const productId = useShowroom((s) => s.selected);
+  const room = useShowroom((s) => s.room);
+  const others = ROOM_MAP[room].productIds.filter((id) => id !== productId);
   const open = useShowroom((s) => s.view === "product" && !s.switching);
   const finish = useShowroom((s) => s.finishes[productId]);
   const quantity = useShowroom((s) => s.quantities[productId]);
   const exploded = useShowroom((s) => s.exploded);
   const zoom = useShowroom((s) => s.zoom);
-  const { setFinish, setQuantity, toggleExploded, setZoom, backToRoom } = useShowroom.getState();
+  const { setFinish, setQuantity, toggleExploded, setZoom, backToRoom, visitProduct } = useShowroom.getState();
   const product = PRODUCT_MAP[productId];
   const current = getFinish(product, finish);
   const orderUrl = whatsappOrderUrl(product, finish, quantity);
@@ -69,7 +71,7 @@ export function ProductPanel() {
             <span className="text-[12.5px] text-ink">{current.name}</span>
           </div>
           <div className="mt-3 flex gap-2.5" role="radiogroup" aria-label="Finish">
-            {FINISH_ORDER.map((id) => {
+            {finishesOf(product).map((id) => {
               const f = getFinish(product, id);
               return (
                 <button
@@ -146,6 +148,29 @@ export function ProductPanel() {
             {!whatsappEnabled() && (
               <p className="mt-2 text-[11.5px] text-charcoal/60">Ordering opens once the WhatsApp number is configured.</p>
             )}
+          </div>
+        )}
+
+        {others.length > 0 && (
+          <div className="mt-8 border-t border-charcoal/12 pt-5">
+            <span className="eyebrow text-charcoal/70">Also in this room</span>
+            <ul className="mt-3 flex flex-col">
+              {others.map((id) => (
+                <li key={id}>
+                  <button
+                    type="button"
+                    onClick={() => visitProduct(id)}
+                    className="group/other flex w-full items-baseline gap-3 border-b border-charcoal/10 py-3 text-left"
+                  >
+                    <span className="text-[10px] tracking-[0.18em] text-stone tabular-nums">{PRODUCT_MAP[id].index}</span>
+                    <span className="flex-1 text-[13.5px] text-ink transition-transform duration-500 group-hover/other:translate-x-1">
+                      {PRODUCT_MAP[id].name}
+                    </span>
+                    <span aria-hidden className="text-charcoal/50">→</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
           </div>
         )}
       </aside>

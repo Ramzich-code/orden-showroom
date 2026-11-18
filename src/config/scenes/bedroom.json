@@ -16,6 +16,26 @@
     "far": 9.3,
     "encoding": "white=near, linear"
   },
+  "products": {
+    "bedside-table": {
+      "position": [
+        -0.39,
+        0,
+        -1.765
+      ],
+      "rotation_y": 0,
+      "camera": "cam_product"
+    },
+    "headboard-shelf": {
+      "position": [
+        1,
+        0,
+        -2.118
+      ],
+      "rotation_y": 0,
+      "camera": "cam_product_headboard-shelf"
+    }
+  },
   "cameras": {
     "cam_room": {
       "position": [
@@ -47,6 +67,21 @@
       "fov": 35.1154,
       "lens_mm": 32
     },
+    "cam_product_headboard-shelf": {
+      "position": [
+        0.2,
+        1.85,
+        -0.55
+      ],
+      "quaternion": [
+        -0.189728,
+        -0.228969,
+        -0.045552,
+        0.953678
+      ],
+      "fov": 42.5542,
+      "lens_mm": 26
+    },
     "cam_room_p": {
       "position": [
         -0.75,
@@ -61,6 +96,21 @@
       ],
       "fov": 78.5788,
       "lens_mm": 22
+    },
+    "cam_product_headboard-shelf_p": {
+      "position": [
+        -0.35,
+        1.9,
+        -0.9
+      ],
+      "quaternion": [
+        -0.179877,
+        -0.413623,
+        -0.083732,
+        0.888566
+      ],
+      "fov": 83.9744,
+      "lens_mm": 20
     },
     "cam_product_p": {
       "position": [

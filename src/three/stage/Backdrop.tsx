@@ -4,7 +4,8 @@ import { useLayoutEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
 import { useTexture } from "@react-three/drei";
-import { Orientation, ROOM_MAP, RoomId, aspectOf, roomAsset, sceneCameras } from "@/config/rooms";
+import type { ProductId } from "@/config/products";
+import { Orientation, ROOM_MAP, RoomId, aspectOf, roomAsset, sceneCamera } from "@/config/rooms";
 import { IMAGE_LAYER, runtime } from "./runtime";
 
 const VERT = /* glsl */ `
@@ -68,15 +69,26 @@ function focal(fovDeg: number, aspect: number) {
  * kind "plate": drawn first, behind everything (the room without the product).
  * kind "beauty": drawn last, over the live product, faded out as it goes live.
  */
-export function Backdrop({ room, kind, orient }: { room: RoomId; kind: "plate" | "beauty"; orient: Orientation }) {
+export function Backdrop({
+  room,
+  kind,
+  orient,
+  product,
+}: {
+  room: RoomId;
+  kind: "plate" | "beauty";
+  orient: Orientation;
+  /** The product whose still is the "product" side of the shot. */
+  product: ProductId;
+}) {
   const { scene } = ROOM_MAP[room];
-  const cams = sceneCameras(room, orient);
+  const cams = useMemo(() => ({ room: sceneCamera(room, "room", orient), product: sceneCamera(room, product, orient) }), [room, product, orient]);
   const aspect = aspectOf(orient);
   const [imgRoom, imgProduct, depthRoom, depthProduct] = useTexture([
     roomAsset(room, "room", kind, orient),
-    roomAsset(room, "product", kind, orient),
+    roomAsset(room, product, kind, orient),
     roomAsset(room, "room", "depth", orient),
-    roomAsset(room, "product", "depth", orient),
+    roomAsset(room, product, "depth", orient),
   ]);
 
   useLayoutEffect(() => {
@@ -149,6 +161,6 @@ export function Backdrop({ room, kind, orient }: { room: RoomId; kind: "plate" |
 
 /** Downloads a room's stills ahead of time. */
 export function preloadRoom(room: RoomId, orient: Orientation) {
-  for (const shot of ["room", "product"] as const)
+  for (const shot of ["room", ...ROOM_MAP[room].productIds] as const)
     for (const kind of ["beauty", "plate", "depth"] as const) useTexture.preload(roomAsset(room, shot, kind, orient));
 }

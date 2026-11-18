@@ -2,30 +2,32 @@
 
 import { use, useEffect, useMemo, useRef, useState } from "react";
 import gsap from "gsap";
-import type { FinishId } from "@/config/products";
+import type { FinishId, ProductId } from "@/config/products";
 import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
 import { Html, useCursor, useGLTF, useTexture } from "@react-three/drei";
 import { PRODUCT_MAP } from "@/config/products";
-import { ROOM_MAP, RoomId } from "@/config/rooms";
+import { RoomId, placement } from "@/config/rooms";
 import { useShowroom } from "@/lib/store";
 import { FurnitureModel } from "../furniture/FurnitureModel";
 import { runtime } from "./runtime";
 
 /**
- * The real-time product, standing exactly where the Cycles product stands.
- * Hidden while the beauty still is shown; an invisible box still takes the
- * hover / click, and the hotspot pin sits above it.
+ * A real-time product, standing exactly where its Cycles twin stands. Hidden
+ * while the beauty still is shown; an invisible box still takes the hover /
+ * click, and the hotspot pin sits above it. Only the selected piece turns and
+ * explodes; the others stay put in its product view.
  */
-export function LiveProduct({ room }: { room: RoomId }) {
-  const { scene, productId } = ROOM_MAP[room];
+export function LiveProduct({ room, productId }: { room: RoomId; productId: ProductId }) {
+  const place = placement(room, productId);
   const product = PRODUCT_MAP[productId];
   const finish = useShowroom((s) => s.finishes[productId]);
   const view = useShowroom((s) => s.view);
-  const hovered = useShowroom((s) => s.hovered);
+  const selected = useShowroom((s) => s.selected === productId);
+  const hovered = useShowroom((s) => s.hovered === productId);
   const entered = useShowroom((s) => s.entered);
   const switching = useShowroom((s) => s.switching);
-  const exploded = useShowroom((s) => s.exploded);
+  const exploded = useShowroom((s) => s.exploded && s.selected === productId);
   const setHovered = useShowroom((s) => s.setHovered);
   const openProduct = useShowroom((s) => s.openProduct);
 
@@ -58,20 +60,21 @@ export function LiveProduct({ room }: { room: RoomId }) {
   useCursor(hovered && view === "room");
 
   useFrame(() => {
-    explodeRef.current = runtime.explode;
+    const active = useShowroom.getState().selected === productId;
+    explodeRef.current = active ? runtime.explode : 0;
     if (live.current) live.current.visible = runtime.live > 0.001;
-    if (turn.current) turn.current.rotation.y = runtime.rotation;
+    if (turn.current) turn.current.rotation.y = active ? runtime.rotation : 0;
   });
 
   const inRoom = view === "room" && entered && !switching;
 
   return (
-    <group position={scene.product_position} rotation-y={scene.product_rotation_y}>
+    <group position={place.position} rotation-y={place.rotation_y} name={productId}>
       <group ref={live}>
         <group ref={turn}>
           <FurnitureModel product={product} finish={finish} explodeRef={explodeRef} labels={exploded} />
           {prevFinish && <FurnitureModel key={prevFinish} product={product} finish={prevFinish} explodeRef={explodeRef} fadeRef={fadeRef} />}
-          <ShadowCard model={product.model} />
+          <ShadowCard model={product.model} active={selected} />
         </group>
       </group>
 
@@ -79,12 +82,12 @@ export function LiveProduct({ room }: { room: RoomId }) {
         position={boxCenter}
         onPointerOver={(e) => {
           e.stopPropagation();
-          if (useShowroom.getState().view === "room") setHovered(true);
+          if (useShowroom.getState().view === "room") setHovered(productId);
         }}
-        onPointerOut={() => setHovered(false)}
+        onPointerOut={() => useShowroom.getState().hovered === productId && setHovered(null)}
         onClick={(e) => {
           e.stopPropagation();
-          if (useShowroom.getState().view === "room") openProduct();
+          if (useShowroom.getState().view === "room") openProduct(productId);
         }}
       >
         <boxGeometry args={[boxSize.x, boxSize.y, boxSize.z]} />
@@ -97,9 +100,9 @@ export function LiveProduct({ room }: { room: RoomId }) {
             type="button"
             className="hotspot"
             data-active={hovered || undefined}
-            onPointerEnter={() => setHovered(true)}
-            onPointerLeave={() => setHovered(false)}
-            onClick={openProduct}
+            onPointerEnter={() => setHovered(productId)}
+            onPointerLeave={() => useShowroom.getState().hovered === productId && setHovered(null)}
+            onClick={() => openProduct(productId)}
             aria-label={`Discover the ${product.name}`}
           >
             <span className="hotspot-dot" aria-hidden />
@@ -126,14 +129,14 @@ const cardInfo = (url: string) => {
  * (public/models/<id>_shadow.png + .json, from export_glb.py). A static card
  * under the live product: same softness as the stills, no real-time pass.
  */
-function ShadowCard({ model }: { model: string }) {
+function ShadowCard({ model, active }: { model: string; active: boolean }) {
   const base = model.replace(/.glb$/, "_shadow");
   const map = useTexture(`${base}.webp`);
   const info = use(cardInfo(`${base}.json`));
   const material = useRef<THREE.MeshBasicMaterial>(null);
   // the card is the assembled product's shadow: let it fade as the parts move apart
   useFrame(() => {
-    if (material.current) material.current.opacity = 0.82 * (1 - 0.65 * runtime.explode);
+    if (material.current) material.current.opacity = 0.82 * (1 - 0.65 * (active ? runtime.explode : 0));
   });
   return (
     <mesh rotation-x={-Math.PI / 2} position={[info.center[0], 0.002, info.center[1]]} renderOrder={-1}>

@@ -6,13 +6,15 @@ ORDEN phase 3: final Cycles stills of the approved rooms (no animation).
 "portrait" renders only the 9:16 phone cameras (cam_*_p, see portrait.py) at
 1080 x 1920 and merges them into the existing <room>.json.
 
-For each room (loaded from blender/rooms/<room>.blend) and each camera:
-  <cam>_beauty.png  full render, product in place (default room view)
-  <cam>_plate.png   same view WITHOUT the product and what rests on it; the
-                    website lays the real-time GLB over this plate
+Each room holds several products (ROOM_PRODUCTS; the first is the room's
+main piece). For each room (blender/rooms/<room>.blend) and each camera
+(cam_room, cam_product = main product, cam_product_<id> = the others):
+  <cam>_beauty.png  full render, every product in place (default view)
+  <cam>_plate.png   same view WITHOUT any of the room's products nor what rests
+                    on them; the website draws all the real-time GLBs over it
   <cam>_depth.png   16-bit mist/depth (white = near) for the subtle parallax
-and one <room>.json with each camera in three.js coordinates (Y-up), its
-vertical fov and the product position, so the GLB lines up with the plate.
+and one <room>.json: cameras in three.js coordinates (Y-up) with their
+vertical fov, and each product's position, rotation and camera.
 Output: blender/renders/final/<room>/
 """
 import json
@@ -30,7 +32,16 @@ import room_kit as rk  # noqa: E402
 import rooms  # noqa: E402
 
 OUT = os.path.join(HERE, "..", "renders", "final")
-PRODUCT = {"living": "coffee-table", "bedroom": "bedside-table", "storage": "wardrobe"}
+ROOM_PRODUCTS = {
+    "living": ["coffee-table", "sofa"],
+    "bedroom": ["bedside-table", "headboard-shelf"],
+    "storage": ["wardrobe", "shoe-bench"],
+}
+PRODUCT = {room: ids[0] for room, ids in ROOM_PRODUCTS.items()}   # main piece (probe, legacy fields)
+
+
+def product_camera(room, pid):
+    return "cam_product" if pid == PRODUCT[room] else f"cam_product_{pid}"
 Z_UP_TO_Y_UP = Matrix.Rotation(-math.pi / 2, 4, "X")
 MIST_START, MIST_DEPTH = 0.3, 9.0
 
@@ -131,9 +142,15 @@ def render_room(room, samples, res, portrait=False):
     os.makedirs(room_dir, exist_ok=True)
     fo = setup_depth(room_dir)
     pid = PRODUCT[room]
+    hidden, products = [], {}
+    for p in ROOM_PRODUCTS[room]:
+        obs = product_objects(p)
+        hidden += obs + resting_on(obs)
+        r = next(o for o in obs if o.parent is None)
+        products[p] = dict(position=[round(v, 5) for v in (Z_UP_TO_Y_UP @ r.matrix_world).translation],
+                           rotation_y=round(r.rotation_euler.z, 6), camera=product_camera(room, p))
+    print("[ORDEN] hidden on plate:", len(hidden), "objects")
     pobs = product_objects(pid)
-    decor = resting_on(pobs)
-    print("[ORDEN] hidden on plate:", [o.name for o in decor])
     root = next(o for o in pobs if o.parent is None)
     json_path = os.path.join(room_dir, f"{room}.json")
     previous = json.load(open(json_path)) if portrait and os.path.exists(json_path) else None
@@ -141,14 +158,14 @@ def render_room(room, samples, res, portrait=False):
                 product_position=[round(v, 5) for v in (Z_UP_TO_Y_UP @ root.matrix_world).translation],
                 product_rotation_y=round(root.rotation_euler.z, 6),
                 depth=dict(near=MIST_START, far=MIST_START + MIST_DEPTH, encoding="white=near, linear"),
-                cameras={})
+                products=products, cameras={})
     cams = [o for o in bpy.data.objects if o.type == "CAMERA" and o.name.startswith("cam_")
             and o.name.endswith("_p") == portrait]
     if previous:
         info["cameras"] = previous["cameras"]
         info["resolution"] = previous["resolution"]
         info["resolution_portrait"] = list(res)
-    for cam in sorted(cams, key=lambda c: c.name, reverse=True):     # cam_room first
+    for cam in sorted(cams, key=lambda c: (not c.name.startswith("cam_room"), c.name)):     # cam_room first
         s.camera = cam
         info["cameras"][cam.name] = three_camera(cam, res[0] / res[1])
         # beauty + depth
@@ -160,11 +177,11 @@ def render_room(room, samples, res, portrait=False):
         print("[ORDEN] rendered", s.render.filepath)
         # plate without the product
         fo.mute = True
-        for o in pobs + decor:
+        for o in hidden:
             o.hide_render = True
         s.render.filepath = os.path.join(room_dir, f"{cam.name}_plate.png")
         bpy.ops.render.render(write_still=True)
-        for o in pobs + decor:
+        for o in hidden:
             o.hide_render = False
         print("[ORDEN] rendered", s.render.filepath)
     with open(json_path, "w") as f:

@@ -20,7 +20,9 @@ interface ShowroomState {
   view: View;
   /** True while the stage fades between two rooms. */
   switching: boolean;
-  hovered: boolean;
+  /** The product in focus in this room (its camera is the product view). */
+  selected: ProductId;
+  hovered: ProductId | null;
   exploded: boolean;
   /** Zoom factor in the product view (1 = framing of the still). */
   zoom: number;
@@ -35,9 +37,12 @@ interface ShowroomState {
   nextRoom: (dir: 1 | -1) => void;
   goToRoom: (room: RoomId) => void;
   finishSwitch: () => void;
-  openProduct: () => void;
+  /** Opens a product of the current room (default: the selected one). */
+  openProduct: (id?: ProductId) => void;
+  /** From the product view, go to another product of the room (via the room view). */
+  visitProduct: (id: ProductId) => void;
   backToRoom: () => void;
-  setHovered: (h: boolean) => void;
+  setHovered: (id: ProductId | null) => void;
   setFinish: (id: ProductId, finish: FinishId) => void;
   setQuantity: (id: ProductId, q: number) => void;
   toggleExploded: () => void;
@@ -58,7 +63,8 @@ export const useShowroom = create<ShowroomState>((set, get) => ({
   room: "living",
   view: "room",
   switching: false,
-  hovered: false,
+  selected: ROOM_MAP.living.productIds[0],
+  hovered: null,
   exploded: false,
   zoom: 1,
   finishes: byProduct((id) => PRODUCTS.find((p) => p.id === id)!.defaultFinish),
@@ -75,10 +81,17 @@ export const useShowroom = create<ShowroomState>((set, get) => ({
   },
   goToRoom: (room) => {
     if (room === get().room && !get().switching) return;
-    set({ room, switching: true, view: "room", exploded: false, zoom: 1, hovered: false, orderOpen: false });
+    set({ room, switching: true, view: "room", exploded: false, zoom: 1, hovered: null, orderOpen: false, selected: ROOM_MAP[room].productIds[0] });
   },
   finishSwitch: () => set({ switching: false }),
-  openProduct: () => set({ view: "product", hovered: false }),
+  openProduct: (id) => set((s) => ({ view: "product", hovered: null, selected: id ?? s.selected })),
+  visitProduct: (id) => {
+    if (get().view === "room") return get().openProduct(id);
+    get().backToRoom();
+    setTimeout(() => {
+      if (get().view === "room" && ROOM_MAP[get().room].productIds.includes(id)) get().openProduct(id);
+    }, 2600);
+  },
   backToRoom: () => set({ view: "room", exploded: false, zoom: 1, orderOpen: false }),
   setHovered: (hovered) => set({ hovered }),
   setFinish: (id, finish) => set((s) => ({ finishes: { ...s.finishes, [id]: finish } })),
@@ -88,7 +101,6 @@ export const useShowroom = create<ShowroomState>((set, get) => ({
   setOrderOpen: (orderOpen) => set({ orderOpen }),
 }));
 
-export const currentProductId = (s: { room: RoomId }) => ROOM_MAP[s.room].productId;
 
 // Dev-only handle for inspecting/driving state from the browser console.
 if (process.env.NODE_ENV !== "production" && typeof window !== "undefined") {

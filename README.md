@@ -12,13 +12,13 @@ npm run dev
 
 ## How a room works
 
-Each room (`living`, `bedroom`, `storage` = Dressing) has one product and two Blender cameras: the room view and the product view. For each camera, Cycles renders:
+Each room (`living`, `bedroom`, `storage` = Dressing) holds several products (living: Lune coffee table + Mjuk sofa; bedroom: Hvile bedside table + Lys headboard shelf; dressing: Fjell wardrobe + Sko shoe bench). Every room has one room camera and one camera per product. For each camera, Cycles renders:
 
-- **beauty**: the still with the product in place, shown by default;
-- **plate**: the same view without the product (and its styling), over which the live GLB is drawn;
+- **beauty**: the still with every product in place, shown by default;
+- **plate**: the same view without any of the room's products (and their styling), over which all the live GLBs are drawn;
 - **depth**: used for a small parallax that matches a real camera shift, so the stills and the GLB stay registered.
 
-Phones held upright get a second set of stills rendered at 9:16, so the product is never cropped by a 16:9 image. The website camera is always exactly one of the Blender cameras (`src/config/scenes/<room>.json`). Zoom crops the frame instead of moving the camera. The live product is lit by a Cycles light probe taken where it stands. It also carries ambient occlusion and a floor shadow baked in Cycles.
+Phones held upright get a second set of stills rendered at 9:16, so the product is never cropped by a 16:9 image. The website camera is always exactly one of the Blender cameras (`src/config/scenes/<room>.json`). Zoom crops the frame instead of moving the camera. Each live product is lit by a Cycles light probe taken where it stands (`probe-<id>.hdr`). It also carries ambient occlusion and a floor shadow baked in Cycles.
 
 ## Asset pipeline (Blender 4.5, run from the project root)
 

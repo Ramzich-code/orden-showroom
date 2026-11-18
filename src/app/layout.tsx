@@ -27,8 +27,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" className={`${sans.variable} ${display.variable}`}>
       <head>
         {/* first room's still: the largest paint; the right one for the screen shape */}
-        <link rel="preload" as="image" href="/rooms/living/room-beauty.webp" media="(min-aspect-ratio: 4/5)" fetchPriority="high" />
-        <link rel="preload" as="image" href="/rooms/living/room-p-beauty.webp" media="(max-aspect-ratio: 4/5)" fetchPriority="high" />
+        <link rel="preload" as="image" href="/rooms/living/room-beauty.webp" media="(min-aspect-ratio: 4/5)" fetchPriority="high" crossOrigin="anonymous" />
+        <link rel="preload" as="image" href="/rooms/living/room-p-beauty.webp" media="(max-aspect-ratio: 4/5)" fetchPriority="high" crossOrigin="anonymous" />
       </head>
       <body className="font-sans">{children}</body>
     </html>

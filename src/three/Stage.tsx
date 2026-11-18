@@ -5,7 +5,7 @@ import * as THREE from "three";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { Environment, PerformanceMonitor, useGLTF } from "@react-three/drei";
 import { PRODUCTS } from "@/config/products";
-import { Orientation, ROOMS, ROOM_MAP, RoomId, aspectOf, hasPortrait, probeUrl, roomAsset } from "@/config/rooms";
+import { Orientation, ROOMS, ROOM_MAP, RoomId, Shot, aspectOf, hasPortrait, probeUrl, roomAsset } from "@/config/rooms";
 import { useShowroom } from "@/lib/store";
 import { preloadMaterials } from "./materials";
 import { Backdrop, preloadRoom } from "./stage/Backdrop";
@@ -17,7 +17,7 @@ import { productFocus } from "./stage/focus";
 const PANEL_W = 420; // desktop product panel width (px), see ProductPanel
 const DISSOLVE_MS = 900;
 
-type FrameBox = { room: RoomId; view: "room" | "product"; orient: Orientation; left: number; top: number; fw: number; fh: number };
+type FrameBox = { room: RoomId; shot: Shot; orient: Orientation; left: number; top: number; fw: number; fh: number };
 
 /** Flags the stage as ready once a few frames of the current room rendered. */
 function ReadySignal({ room }: { room: RoomId }) {
@@ -47,7 +47,10 @@ export default function Stage() {
   const finishSwitch = useShowroom((s) => s.finishSwitch);
   const sceneReady = useShowroom((s) => s.sceneReady);
   const reduced = useShowroom((s) => s.reducedMotion);
+  const selected = useShowroom((s) => s.selected);
   const [shown, setShown] = useState<RoomId>(room);
+  // the product whose camera is the product view (valid for the room on screen)
+  const shotProduct = ROOM_MAP[shown].productIds.includes(selected) ? selected : ROOM_MAP[shown].productIds[0];
   /** The previous room's still, dissolving over the new one. */
   const [ghost, setGhost] = useState<(FrameBox & { on: boolean }) | null>(null);
   /** The frame sits a little closer, then settles (entry and new room). */
@@ -62,7 +65,7 @@ export default function Stage() {
   // phones held upright get the 9:16 stills (rendered for them), others the 16:9 ones
   const orient: Orientation = vp.w / vp.h < 0.8 && hasPortrait(shown) ? "portrait" : "landscape";
   const aspect = aspectOf(orient);
-  const f2 = productFocus(shown, orient);
+  const f2 = productFocus(shown, orient, shotProduct);
   const focus = { room: { x: f2.room.x, y: 1 - f2.room.y }, product: { x: f2.product.x, y: 1 - f2.product.y } };
 
   // viewport
@@ -131,7 +134,7 @@ export default function Stage() {
   const left = THREE.MathUtils.clamp(visibleW / 2 - f.x * fw, Math.min(0, visibleW - fw), 0);
   const top = THREE.MathUtils.clamp(visibleH / 2 - f.y * fh, Math.min(0, coverH - fh), 0);
   useLayoutEffect(() => {
-    if (room === shown) lastBox.current = { room: shown, view, orient, left, top, fw, fh };
+    if (room === shown) lastBox.current = { room: shown, shot: view === "room" ? "room" : shotProduct, orient, left, top, fw, fh };
   });
 
   // drag to turn, wheel / pinch to zoom (product view only)
@@ -258,20 +261,22 @@ export default function Stage() {
             onFallback={() => setDpr(1)}
           />
           <Suspense fallback={null}>
-            <Environment files={probeUrl(shown)} environmentIntensity={1} />
-            <Backdrop room={shown} kind="plate" orient={orient} />
-            <LiveProduct room={shown} />
-            <Backdrop room={shown} kind="beauty" orient={orient} />
+            <Environment files={probeUrl(shown, shotProduct)} environmentIntensity={1} />
+            <Backdrop room={shown} kind="plate" orient={orient} product={shotProduct} />
+            {ROOM_MAP[shown].productIds.map((id) => (
+              <LiveProduct key={id} room={shown} productId={id} />
+            ))}
+            <Backdrop room={shown} kind="beauty" orient={orient} product={shotProduct} />
             <ReadySignal room={shown} />
           </Suspense>
-          <ShotRig room={shown} orient={orient} />
+          <ShotRig room={shown} orient={orient} product={shotProduct} />
         </Canvas>
         </div>
       </div>
       {ghost && (
         // eslint-disable-next-line @next/next/no-img-element
         <img
-          src={roomAsset(ghost.room, ghost.view, "beauty", ghost.orient)}
+          src={roomAsset(ghost.room, ghost.shot, "beauty", ghost.orient)}
           alt=""
           aria-hidden
           className="pointer-events-none absolute max-w-none ease-[var(--ease-cine)]"

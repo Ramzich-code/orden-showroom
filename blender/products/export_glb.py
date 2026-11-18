@@ -26,8 +26,8 @@ from mathutils import Vector
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.abspath(os.path.join(HERE, "..", "..", "public", "models"))
-PRODUCTS = ["coffee-table", "bedside-table", "wardrobe"]
-AO_SIZE = {"coffee-table": 2048, "bedside-table": 1024, "wardrobe": 2048}
+PRODUCTS = ["coffee-table", "bedside-table", "wardrobe", "sofa", "headboard-shelf", "shoe-bench"]
+AO_SIZE = {"coffee-table": 2048, "bedside-table": 1024, "wardrobe": 2048, "sofa": 2048, "headboard-shelf": 1024, "shoe-bench": 1024}
 
 
 def gpu(scene, samples):

@@ -16,6 +16,26 @@
     "far": 9.3,
     "encoding": "white=near, linear"
   },
+  "products": {
+    "coffee-table": {
+      "position": [
+        -0.6,
+        0,
+        -0.3
+      ],
+      "rotation_y": 0,
+      "camera": "cam_product"
+    },
+    "sofa": {
+      "position": [
+        -0.55,
+        0,
+        -1.92
+      ],
+      "rotation_y": 0,
+      "camera": "cam_product_sofa"
+    }
+  },
   "cameras": {
     "cam_room": {
       "position": [
@@ -47,6 +67,21 @@
       "fov": 31.4173,
       "lens_mm": 36
     },
+    "cam_product_sofa": {
+      "position": [
+        0.75,
+        1.7,
+        1.05
+      ],
+      "quaternion": [
+        -0.182944,
+        0.201224,
+        0.038285,
+        0.961548
+      ],
+      "fov": 37.2991,
+      "lens_mm": 30
+    },
     "cam_room_p": {
       "position": [
         -2.35,
@@ -76,6 +111,21 @@
       ],
       "fov": 67.3801,
       "lens_mm": 27
+    },
+    "cam_product_sofa_p": {
+      "position": [
+        -0.3,
+        1.6,
+        1.5
+      ],
+      "quaternion": [
+        -0.167407,
+        0.035961,
+        0.006111,
+        0.985213
+      ],
+      "fov": 78.5788,
+      "lens_mm": 22
     }
   },
   "resolution_portrait": [

@@ -1,6 +1,6 @@
 import * as THREE from "three";
-import { PRODUCT_MAP } from "@/config/products";
-import { Orientation, ROOM_MAP, RoomId, SceneCamera, aspectOf, sceneCameras } from "@/config/rooms";
+import { PRODUCT_MAP, ProductId } from "@/config/products";
+import { Orientation, RoomId, SceneCamera, aspectOf, placement, sceneCamera } from "@/config/rooms";
 
 export interface Focus {
   /** Product centre in the frame, uv units (0..1, bottom-left origin). */
@@ -13,17 +13,17 @@ export interface Focus {
 
 const cache = new Map<string, Focus>();
 
-/** Where the product sits in each Blender shot (projected with the exact cameras). */
-export function productFocus(room: RoomId, o: Orientation = "landscape"): Focus {
-  const key = `${room}:${o}`;
+/** Where a product sits in the room still and in its own still (projected with the exact cameras). */
+export function productFocus(room: RoomId, o: Orientation, pid: ProductId): Focus {
+  const key = `${room}:${o}:${pid}`;
   let f = cache.get(key);
   if (f) return f;
-  const { scene, productId } = ROOM_MAP[room];
-  const product = PRODUCT_MAP[productId];
-  const point = new THREE.Vector3(...scene.product_position);
+  const product = PRODUCT_MAP[pid];
+  const at = placement(room, pid).position;
+  const point = new THREE.Vector3(...at);
   point.y += product.hotspotY * 0.45;
-  const foot = new THREE.Vector3(...scene.product_position);
-  const head = foot.clone().setY(product.dimensions.height / 100);
+  const foot = new THREE.Vector3(...at);
+  const head = foot.clone().setY(Math.max(foot.y + 0.1, product.hotspotY - 0.15));
   const camera = (c: SceneCamera) => {
     const cam = new THREE.PerspectiveCamera(c.fov, aspectOf(o), 0.05, 60);
     cam.position.set(...c.position);
@@ -33,19 +33,15 @@ export function productFocus(room: RoomId, o: Orientation = "landscape"): Focus 
   };
   const size = (c: SceneCamera) => {
     const cam = camera(c);
-    return Math.abs(head.clone().project(cam).y - foot.clone().project(cam).y) / 2;
+    return Math.max(0.02, Math.abs(head.clone().project(cam).y - foot.clone().project(cam).y) / 2);
   };
   const project = (c: SceneCamera) => {
     const p = point.clone().project(camera(c));
     return new THREE.Vector2((p.x + 1) / 2, (p.y + 1) / 2);
   };
-  const cams = sceneCameras(room, o);
-  f = {
-    room: project(cams.room),
-    product: project(cams.product),
-    sizeRoom: size(cams.room),
-    sizeProduct: size(cams.product),
-  };
+  const roomCam = sceneCamera(room, "room", o);
+  const productCam = sceneCamera(room, pid, o);
+  f = { room: project(roomCam), product: project(productCam), sizeRoom: size(roomCam), sizeProduct: size(productCam) };
   cache.set(key, f);
   return f;
 }

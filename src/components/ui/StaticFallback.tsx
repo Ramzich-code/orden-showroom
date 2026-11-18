@@ -1,4 +1,4 @@
-import { FINISH_ORDER, PRODUCT_MAP, formatPrice, getFinish } from "@/config/products";
+import { PRODUCT_MAP, finishesOf, formatPrice, getFinish } from "@/config/products";
 import { ROOMS, roomAsset } from "@/config/rooms";
 import { SITE } from "@/config/site";
 import { whatsappOrderUrl } from "@/lib/whatsapp";
@@ -19,14 +19,16 @@ export function StaticFallback() {
       </h1>
       <ol className="mt-12 flex flex-col gap-16">
         {ROOMS.map((room) => {
-          const p = PRODUCT_MAP[room.productId];
-          const order = whatsappOrderUrl(p, p.defaultFinish, 1);
           return (
             <li key={room.id}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={roomAsset(room.id, "room", "beauty")} alt={`${room.name}: ${p.name}`} className="aspect-video w-full object-cover" loading="lazy" />
-              <div className="mt-6 grid gap-3 md:grid-cols-[80px_1fr_1fr] md:gap-8">
-                <span className="text-[11px] tracking-[0.18em] text-stone">{room.index}</span>
+              <img src={roomAsset(room.id, "room", "beauty")} alt={room.title} className="aspect-video w-full object-cover" loading="lazy" />
+              {room.productIds.map((id) => {
+                const p = PRODUCT_MAP[id];
+                const order = whatsappOrderUrl(p, p.defaultFinish, 1);
+                return (
+              <div key={id} className="mt-6 grid gap-3 md:grid-cols-[80px_1fr_1fr] md:gap-8">
+                <span className="text-[11px] tracking-[0.18em] text-stone">{p.index}</span>
                 <div>
                   <h2 className="font-display text-[32px] leading-none text-ink">{p.name}</h2>
                   <p className="mt-2 text-[13px] text-charcoal/70">{p.tagline}</p>
@@ -35,7 +37,7 @@ export function StaticFallback() {
                   <p>{p.description}</p>
                   <p className="mt-3 text-charcoal/60">
                     {p.dimensions.width} × {p.dimensions.depth} × {p.dimensions.height} cm ·{" "}
-                    {FINISH_ORDER.map((f) => getFinish(p, f).name).join(" / ")} · {formatPrice(p.price)}
+                    {finishesOf(p).map((f) => getFinish(p, f).name).join(" / ")} · {formatPrice(p.price)}
                   </p>
                   {order && (
                     <a href={order} target="_blank" rel="noopener noreferrer" className="mt-4 inline-block bg-ink px-5 py-3 text-[12.5px] text-paper">
@@ -44,6 +46,8 @@ export function StaticFallback() {
                   )}
                 </div>
               </div>
+                );
+              })}
             </li>
           );
         })}

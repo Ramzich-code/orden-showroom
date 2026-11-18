@@ -4,7 +4,8 @@ import { useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import gsap from "gsap";
 import { useFrame, useThree } from "@react-three/fiber";
-import { Orientation, ROOM_MAP, RoomId, sceneCameras } from "@/config/rooms";
+import type { ProductId } from "@/config/products";
+import { Orientation, ROOM_MAP, RoomId, sceneCamera } from "@/config/rooms";
 import { useShowroom } from "@/lib/store";
 import { cropAround, matchCrops, productFocus } from "./focus";
 import { IMAGE_LAYER, runtime } from "./runtime";
@@ -23,25 +24,26 @@ const ease = "power3.inOut";
  * its product framing, and the stills dissolve underneath; the live product
  * takes over once the camera has arrived.
  */
-export function ShotRig({ room, orient }: { room: RoomId; orient: Orientation }) {
+export function ShotRig({ room, orient, product }: { room: RoomId; orient: Orientation; product: ProductId }) {
   const camera = useThree((s) => s.camera) as THREE.PerspectiveCamera;
   const size = useThree((s) => s.size);
   const view = useShowroom((s) => s.view);
   const exploded = useShowroom((s) => s.exploded);
   const hovered = useShowroom((s) => s.hovered);
   const reduced = useShowroom((s) => s.reducedMotion);
-  const finish = useShowroom((s) => s.finishes[ROOM_MAP[room].productId]);
-  const focus = useMemo(() => productFocus(room, orient), [room, orient]);
+  // the room goes live (plate + real-time pieces) as soon as one piece is not in its Signature finish
+  const roomLive = useShowroom((s) => ROOM_MAP[room].productIds.some((id) => s.finishes[id] !== "signature"));
+  const focus = useMemo(() => productFocus(room, orient, product), [room, orient, product]);
 
   const poses = useMemo(() => {
-    const cams = sceneCameras(room, orient);
+    const cams = { room: sceneCamera(room, "room", orient), product: sceneCamera(room, product, orient) };
     const pose = (c: typeof cams.room) => ({
       pos: new THREE.Vector3(...c.position),
       quat: new THREE.Quaternion(...c.quaternion),
       fov: c.fov,
     });
     return { room: pose(cams.room), product: pose(cams.product) };
-  }, [room, orient]);
+  }, [room, orient, product]);
 
   const pointer = useRef(new THREE.Vector2());
   const zoom = useRef(1);
@@ -64,14 +66,14 @@ export function ShotRig({ room, orient }: { room: RoomId; orient: Orientation })
       rotation: 0,
       rotationTarget: 0,
       hover: 0,
-      live: s.finishes[ROOM_MAP[room].productId] === "signature" ? 0 : 1,
+      live: ROOM_MAP[room].productIds.some((id) => s.finishes[id] !== "signature") ? 1 : 0,
     });
-    runtime.focusRoom.copy(focus.room);
-  }, [room, focus]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [room]);
 
   // Room <-> product.
   useEffect(() => {
-    const roomLive = useShowroom.getState().finishes[ROOM_MAP[room].productId] === "signature" ? 0 : 1;
+    const live = roomLive ? 1 : 0;
     const tl = gsap.timeline();
     if (view === "product") {
       tl.to(runtime, { live: 0, duration: 0.35 * k, ease: "power1.out" })
@@ -82,26 +84,29 @@ export function ShotRig({ room, orient }: { room: RoomId; orient: Orientation })
       tl.to(runtime, { explode: 0, duration: 0.7 * k, ease })
         .to(runtime, { live: 0, duration: 0.45 * k, ease: "power1.inOut" }, 0.2 * k)
         .to(runtime, { shot: 0, duration: 1.9 * k, ease }, ">-0.05")
-        .to(runtime, { live: roomLive, duration: 0.5 * k, ease: "power1.inOut" });
+        .to(runtime, { live, duration: 0.5 * k, ease: "power1.inOut" });
     }
     return () => {
       tl.kill();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [view, room, k]);
 
-  // Finish changed while in the room view (back from the product view).
+  // A finish changed while in the room view.
   useEffect(() => {
     if (useShowroom.getState().view !== "room") return;
-    gsap.to(runtime, { live: finish === "signature" ? 0 : 1, duration: 0.6 * k });
-  }, [finish, k]);
+    gsap.to(runtime, { live: roomLive ? 1 : 0, duration: 0.6 * k });
+  }, [roomLive, k]);
 
   useEffect(() => {
     gsap.to(runtime, { explode: exploded ? 1 : 0, duration: 1.6 * k, ease: "power2.inOut" });
   }, [exploded, k]);
 
+  // hover: soft spotlight on the hovered piece
   useEffect(() => {
+    if (hovered) runtime.focusRoom.copy(productFocus(room, orient, hovered).room);
     gsap.to(runtime, { hover: hovered && !reduced ? 1 : 0, duration: 0.9, ease: "power2.out" });
-  }, [hovered, reduced]);
+  }, [hovered, reduced, room, orient]);
 
   // Mouse parallax (desktop pointers only).
   useEffect(() => {

@@ -15,7 +15,17 @@ export type Vec3 = [number, number, number];
 export type FinishId = "signature" | "white" | "black" | "oak";
 
 /** How a component reacts to a finish change (see src/three/materials.ts). */
-export type MaterialRole = "body" | "accent" | "travertine" | "marble" | "base" | "metal" | "interior";
+export type MaterialRole =
+  | "body"
+  | "accent"
+  | "travertine"
+  | "marble"
+  | "base"
+  | "metal"
+  | "interior"
+  | "fabric" // fixed oatmeal boucle (sofa, bench cushion)
+  | "socket" // fixed anthracite socket plates
+  | "light"; // LED diffusers (emissive)
 
 export interface Finish {
   id: FinishId;
@@ -43,7 +53,7 @@ export interface ProductComponent {
   annotate?: boolean;
 }
 
-export type ProductId = "coffee-table" | "bedside-table" | "wardrobe";
+export type ProductId = "coffee-table" | "bedside-table" | "wardrobe" | "sofa" | "headboard-shelf" | "shoe-bench";
 
 export interface Product {
   id: ProductId;
@@ -57,13 +67,17 @@ export interface Product {
   dimensions: { width: number; depth: number; height: number }; // centimetres
   details: string[];
   /** The reference look, offered as the first finish. */
-  signature: { name: string; swatch: string; description: string; body: "walnut" | "taupe" | "greige" };
+  signature: { name: string; swatch: string; description: string; body: "walnut" | "taupe" | "greige" | "oak" };
   defaultFinish: FinishId;
+  /** Finishes offered (default: all of FINISH_ORDER). */
+  finishes?: FinishId[];
   model: string;
   components: ProductComponent[];
   /** Height (m) of the hotspot pin above the product origin. */
   hotspotY: number;
 }
+
+export const finishesOf = (product: Product): FinishId[] => product.finishes ?? FINISH_ORDER;
 
 export function getFinish(product: Product, id: FinishId): Finish {
   if (id === "signature") return { id, ...product.signature };
@@ -161,6 +175,90 @@ export const PRODUCTS: Product[] = [
       { id: "leg-br", label: "Leg", explode: [0.12, -0.08, -0.12] },
     ],
     hotspotY: 2.2,
+  },
+  {
+    id: "sofa",
+    index: "04",
+    name: "Mjuk Sofa",
+    line: "Living",
+    tagline: "Soft all the way round.",
+    description:
+      "A long, low three-seater in oatmeal boucle where every volume is a cushion: rolled arms that lean back into the frame, two deep seats whose front runs almost to the floor and two generous back cushions.",
+    price: null,
+    dimensions: { width: 260, depth: 100, height: 76 },
+    details: ["Oatmeal boucle, removable covers", "Rolled arms, feather-wrapped foam", "Two seat and two back cushions", "Hidden recessed base"],
+    signature: { name: "Oat Bouclé", swatch: "#D8CCB8", description: "Wool-blend boucle, oatmeal", body: "oak" },
+    defaultFinish: "signature",
+    finishes: ["signature"],
+    model: "/models/sofa.glb",
+    components: [
+      { id: "back-cushion-l", label: "Back cushion", detail: "Feather & foam", explode: [-0.05, 0.3, -0.05], annotate: true },
+      { id: "back-cushion-r", label: "Back cushion", explode: [0.05, 0.3, -0.05] },
+      { id: "seat-l", label: "Seat cushion", detail: "High-resilience foam", explode: [-0.06, 0.2, 0.35], annotate: true },
+      { id: "seat-r", label: "Seat cushion", explode: [0.06, 0.2, 0.35] },
+      { id: "arm-l", label: "Arm", detail: "Rolled", explode: [-0.4, 0, 0], annotate: true },
+      { id: "arm-r", label: "Arm", explode: [0.4, 0, 0] },
+      { id: "back", label: "Frame", detail: "Solid beech", explode: [0, 0.05, -0.35], annotate: true },
+      { id: "base", label: "Base", explode: [0, -0.02, 0] },
+    ],
+    hotspotY: 0.95,
+  },
+  {
+    id: "headboard-shelf",
+    index: "05",
+    name: "Lys Headboard Shelf",
+    line: "Bedroom",
+    tagline: "Light and power, right behind you.",
+    description:
+      "An oak ledge along the top of the bed head. Two LED strips set into it wash the wall with warm light; a row of four sockets and a socket with USB charge everything you keep at night, with no cable on the floor.",
+    price: null,
+    dimensions: { width: 220, depth: 16, height: 15 },
+    details: ["Solid oak, 25 mm", "Two warm LED strips (2700 K)", "Four sockets + one with USB", "Wall-mounted on a hidden apron"],
+    signature: { name: "Natural Oak", swatch: "#C8A77C", description: "Oak, oiled, anthracite sockets", body: "oak" },
+    defaultFinish: "signature",
+    finishes: ["signature", "white", "black"],
+    model: "/models/headboard-shelf.glb",
+    components: [
+      { id: "shelf", label: "Ledge", detail: "Oak · 25 mm", explode: [0, 0.16, 0], annotate: true },
+      { id: "led-l", label: "LED strip", detail: "2700 K, opal diffuser", explode: [0, 0.3, 0], annotate: true },
+      { id: "led-r", label: "LED strip", explode: [0, 0.3, 0] },
+      { id: "sockets", label: "Sockets", detail: "4 × flush", explode: [0, 0.28, 0.06], annotate: true },
+      { id: "usb-socket", label: "Socket + USB", explode: [0, 0.28, 0.06] },
+      { id: "socket-end", label: "Socket", explode: [0, 0.28, 0.06] },
+      { id: "apron", label: "Wall apron", detail: "Hidden", explode: [0, -0.12, -0.04], annotate: true },
+      { id: "bracket-l", label: "Bracket", explode: [0, -0.04, 0] },
+      { id: "bracket-r", label: "Bracket", explode: [0, -0.04, 0] },
+    ],
+    hotspotY: 1.38,
+  },
+  {
+    id: "shoe-bench",
+    index: "06",
+    name: "Sko Shoe Bench",
+    line: "Dressing",
+    tagline: "Sit down, put them on.",
+    description:
+      "A low oak bench to sit on while you dress: a boucle cushion over three open bays with a shelf for shoes, and the collection's dark recessed plinth.",
+    price: null,
+    dimensions: { width: 120, depth: 38, height: 47 },
+    details: ["Oak, 22 mm", "Boucle cushion, removable cover", "Three bays, six shoe compartments", "Recessed plinth"],
+    signature: { name: "Natural Oak", swatch: "#C8A77C", description: "Oak, oiled, oatmeal boucle cushion", body: "oak" },
+    defaultFinish: "signature",
+    finishes: ["signature", "white", "black"],
+    model: "/models/shoe-bench.glb",
+    components: [
+      { id: "cushion", label: "Cushion", detail: "Boucle · 60 mm", explode: [0, 0.32, 0], annotate: true },
+      { id: "top", label: "Top", explode: [0, 0.2, 0] },
+      { id: "side-l", label: "Side", detail: "Oak · 22 mm", explode: [-0.28, 0, 0], annotate: true },
+      { id: "side-r", label: "Side", explode: [0.28, 0, 0] },
+      { id: "divider-l", label: "Divider", explode: [-0.1, 0, 0.2] },
+      { id: "divider-r", label: "Divider", explode: [0.1, 0, 0.2] },
+      { id: "shelf", label: "Shoe shelf", explode: [0, 0.04, 0.3], annotate: true },
+      { id: "bottom", label: "Bottom", explode: [0, -0.02, 0.12] },
+      { id: "back", label: "Back", explode: [0, 0, -0.25] },
+      { id: "plinth", label: "Plinth", detail: "Recessed", explode: [0, -0.05, 0], annotate: true },
+    ],
+    hotspotY: 0.72,
   },
 ];
 

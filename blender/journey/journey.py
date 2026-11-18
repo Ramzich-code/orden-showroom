@@ -31,6 +31,7 @@ import rooms  # noqa: E402
 OUT = os.path.abspath(os.path.join(HERE, "..", "renders", "journey"))
 FRAMES = {"exterior": 72, "living": 60, "bedroom": 60, "storage": 60}
 EXPOSURE = dict(rooms.EXPOSURE, exterior=0.35)
+RESUME = False
 
 # Room glides: (start location, start target, start lens) -> the room camera.
 # Landscape cameras end on cam_room, portrait on cam_room_p.
@@ -124,10 +125,16 @@ def exterior():
     pane = rk.hard_box("ext_glass", (gx1 - gx0, 0.012, gz1 - 0.02), ((gx0 + gx1) / 2, -0.12, gz1 / 2 + 0.01), None, col)
     pane.data.materials.clear()
     pane.data.materials.append(glass)
+    # a flat pane: smoothed normals on a thin box act like a lens (barrel distortion, sun hotspot)
+    for m in list(pane.modifiers):
+        pane.modifiers.remove(m)
+    for poly in pane.data.polygons:
+        poly.use_smooth = False
     for i, x in enumerate((gx0, gx1)):                       # frameless centre: one wide pane
         rk.hard_box(f"ext_mullion_{i}", (0.05, 0.08, gz1), (x, -0.12, gz1 / 2), "base", col)
     rk.hard_box("ext_glass_head", (gx1 - gx0, 0.08, 0.05), ((gx0 + gx1) / 2, -0.12, gz1), "base", col)
-    rk.hard_box("ext_door", (dx1 - dx0 - 0.02, 0.06, dz1 - 0.01), ((dx0 + dx1) / 2, -0.08, dz1 / 2), "walnut", col)
+    # door fills its opening: no gap for the low sun to project a pinhole spot inside
+    rk.hard_box("ext_door", (dx1 - dx0 + 0.02, 0.06, dz1 + 0.01), ((dx0 + dx1) / 2, -0.08, dz1 / 2), "walnut", col)
     rk.hard_box("ext_door_pull", (0.025, 0.04, 0.9), (dx1 - 0.18, -0.13, 1.05), "base", col)
     # inside, seen through the glass: the living room pieces in warm light
     rk.place_product("sofa", (0.5, 4.6, 0))
@@ -178,8 +185,8 @@ def render_segment(name, samples, res, portrait):
     frames = FRAMES[name]
     if name == "exterior":
         exterior()
-        start = ((-0.4, -13.5, 1.45), (0.6, 2.0, 1.55), 32 if not portrait else 24)
-        end = ((0.45, -1.7, 1.45), (0.45, 4.0, 1.15), 28 if not portrait else 20)
+        start = ((-0.4, -13.5, 1.45), (0.6, 2.0, 1.55), 32) if not portrait else ((0.3, -8.8, 1.55), (0.5, 2.0, 1.9), 26)
+        end = ((0.45, -1.7, 1.45), (0.45, 4.0, 1.15), 28) if not portrait else ((0.45, -1.7, 1.45), (0.45, 4.0, 1.15), 20)
     else:
         bpy.ops.wm.open_mainfile(filepath=os.path.join(ROOMS_DIR, f"{name}.blend"))
         start = (GLIDE_P if portrait else GLIDE)[name]
@@ -194,6 +201,9 @@ def render_segment(name, samples, res, portrait):
     os.makedirs(out, exist_ok=True)
     s.render.filepath = os.path.join(out, "f_")
     s.render.image_settings.file_format = "PNG"
+    # "resume": keep the frames already rendered (after an interrupted run)
+    s.render.use_overwrite = not RESUME
+    s.render.use_placeholder = RESUME
     if name == "exterior":
         bpy.ops.wm.save_as_mainfile(filepath=os.path.join(HERE, "exterior.blend"))
     bpy.ops.render.render(animation=True)
@@ -205,6 +215,8 @@ def main():
     names = [a for a in args if a in FRAMES] or list(FRAMES)
     samples = next((int(a) for a in args if a.isdigit()), 16)
     portrait = "portrait" in args
+    global RESUME
+    RESUME = "resume" in args
     res = next((tuple(int(v) for v in a.split("x")) for a in args if "x" in a and a[0].isdigit()),
                (540, 960) if portrait else (960, 540))
     for n in names:

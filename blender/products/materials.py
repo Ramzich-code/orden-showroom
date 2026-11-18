@@ -50,9 +50,10 @@ TEX.update({   # tinted variants of the same scans (no extra downloads)
     "linen_cream": dict(TEX["linen"]),
     "carpet_grey": dict(TEX["carpet"]),
     "marble_warm": dict(TEX["marble"]),
+    "boucle_oat": dict(TEX["boucle"], tile=0.32),
     "oak_warm": dict(TEX["oak"]),
 })
-FABRICS = {"boucle", "linen", "linen_sand", "carpet", "linen_grey", "linen_cream", "carpet_grey"}
+FABRICS = {"boucle", "boucle_oat", "linen", "linen_sand", "carpet", "linen_grey", "linen_cream", "carpet_grey"}
 
 SMUDGE = os.path.join(ASSETS, "Fingerprints003", "Fingerprints003_2K-JPG_Roughness.jpg")
 
@@ -77,6 +78,7 @@ GRADE = {
     "carpet_grey": dict(hue=0.5, sat=0.0, val=0.9, tint=(0.50, 0.47, 0.43)),   # taupe-grey rug (living)
     "marble_warm": dict(hue=0.5, sat=0.6, val=1.0, tint=(1.0, 0.93, 0.82)),    # cream marble panel (dressing)
     "oak_warm": dict(hue=0.505, sat=1.2, val=0.62),     # warm oak joinery (dressing niche)
+    "boucle_oat": dict(hue=0.5, sat=0.35, val=0.9, tint=(0.86, 0.77, 0.64)),  # oatmeal boucle (sofa reference)
 }
 
 # roughness remap per scanned material (finish, not the scan's capture state)
@@ -93,7 +95,7 @@ ROUGH = {
     "carpet": (0.88, 1.0),
     "floor_dark": (0.30, 0.55), "floor_grey": (0.35, 0.6), "plaster_grey": (0.75, 0.95), "plaster_white": (0.8, 0.95),
     "linen_grey": (0.75, 0.95), "linen_cream": (0.7, 0.92), "carpet_grey": (0.88, 1.0),
-    "marble_warm": (0.10, 0.25), "oak_warm": (0.4, 0.62),
+    "marble_warm": (0.10, 0.25), "oak_warm": (0.4, 0.62), "boucle_oat": (0.85, 1.0),
 }
 
 def _lin(srgb):
@@ -108,7 +110,11 @@ PAINT = {  # matte lacquers: display colour (sRGB) picked from the references, r
     "greige": (_lin((0.84, 0.79, 0.71)), 0.45),   # warm cream greige (wardrobe reference)
 }
 
-SIGNATURE_BODY = {"coffee-table": "walnut", "bedside-table": "taupe", "wardrobe": "greige"}
+SIGNATURE_BODY = {"coffee-table": "walnut", "bedside-table": "taupe", "wardrobe": "greige",
+                  "headboard-shelf": "oak", "sofa": "oak", "shoe-bench": "oak"}
+
+# fixed roles of the 2026-11-18 additions
+FIXED_ROLE = {"fabric": "boucle_oat", "socket": "socket", "light": "light"}
 
 
 def _img(path, non_color):
@@ -271,6 +277,13 @@ def material(key):
         m = _plain("orden_base", (0.018, 0.016, 0.015), 0.5)
     elif key == "metal":
         m = _plain("orden_metal", (0.62, 0.60, 0.57), 0.3, 1.0)
+    elif key == "socket":
+        m = _plain("orden_socket", (0.028, 0.028, 0.03), 0.42)
+    elif key == "light":
+        m = _plain("orden_light", (0.95, 0.9, 0.82), 0.3)
+        b = m.node_tree.nodes["Principled BSDF"]
+        b.inputs["Emission Color"].default_value = (1.0, 0.72, 0.42, 1)
+        b.inputs["Emission Strength"].default_value = 12.0
     elif key == "interior":
         m = _plain("orden_interior", (0.62, 0.52, 0.38), 0.65)
     else:
@@ -285,7 +298,7 @@ def resolve(product, finish, role):
         return SIGNATURE_BODY[product] if finish == "signature" else finish
     if role == "accent":   # pulls: walnut in Signature (as in the approved image)
         return "walnut" if finish == "signature" else ("black" if finish == "oak" else "oak")
-    return role
+    return FIXED_ROLE.get(role, role)
 
 
 def apply_finish(root, product, finish):

@@ -7,14 +7,51 @@ import { useShowroom } from "@/lib/store";
 
 const cache = new Map<string, HTMLImageElement>();
 
-function load(url: string, onload?: () => void) {
+/*
+ * Frames are fetched a few at a time, in order. Firing all ~250 requests at
+ * once stalls the HTTP/2 connection on static hosts (GitHub Pages), and the
+ * first frames of the opening glide would wait behind everything else.
+ */
+const MAX_INFLIGHT = 6;
+const queue: string[] = [];
+let inflight = 0;
+
+function pump() {
+  while (inflight < MAX_INFLIGHT && queue.length) {
+    const url = queue.shift()!;
+    const img = cache.get(url);
+    if (!img || img.src) continue;
+    inflight++;
+    const done = () => {
+      inflight--;
+      pump();
+    };
+    img.addEventListener("load", done, { once: true });
+    img.addEventListener("error", () => {
+      cache.delete(url); // asked again later gets a fresh try
+      done();
+    }, { once: true });
+    img.src = url;
+  }
+}
+
+/** The frame's image; queued (or moved to the front when `urgent`) if not fetched yet. */
+function load(url: string, opts: { onload?: () => void; urgent?: boolean } = {}) {
   let img = cache.get(url);
   if (!img) {
     img = new Image();
     img.decoding = "async";
-    img.src = url;
     cache.set(url, img);
   }
+  if (!img.src) {
+    const at = queue.indexOf(url);
+    if (opts.urgent) {
+      if (at > 0) queue.splice(at, 1);
+      if (at !== 0) queue.unshift(url);
+    } else if (at < 0) queue.push(url);
+    pump();
+  }
+  const { onload } = opts;
   if (onload) {
     if (img.complete && img.naturalWidth) onload();
     else img.addEventListener("load", onload, { once: true });
@@ -27,9 +64,11 @@ function preloadSegment(segment: SegmentId, portrait: boolean, onFirst?: () => v
   let loaded = 0;
   const first = Math.min(12, n);
   for (let i = 0; i < n; i++)
-    load(frameUrl(segment, portrait, i), () => {
-      loaded++;
-      if (loaded === first) onFirst?.();
+    load(frameUrl(segment, portrait, i), {
+      onload: () => {
+        loaded++;
+        if (loaded === first) onFirst?.();
+      },
     });
 }
 
@@ -45,8 +84,14 @@ export function JourneyFrames({ portrait }: { portrait: boolean }) {
 
   // opening sequence first; the room glides once the house is on screen
   useEffect(() => {
+    // orientation changed (or first real measure): drop what the other one still had queued
+    queue.length = 0;
     preloadSegment("exterior", portrait, () => useJourney.getState().set({ ready: true }));
     if (frameCount("exterior", portrait) === 0) useJourney.getState().set({ ready: true });
+    // never hold the loader forever on a slow or flaky connection: the
+    // frames keep streaming in behind the opening view
+    const giveUp = setTimeout(() => useJourney.getState().set({ ready: true }), 20000);
+    return () => clearTimeout(giveUp);
   }, [portrait]);
   useEffect(() => {
     if (!entered) return;
@@ -79,8 +124,8 @@ export function JourneyFrames({ portrait }: { portrait: boolean }) {
       const t = f - i0;
       const key = `${s.segment}:${portrait}:${f.toFixed(3)}:${w}x${h}`;
       if (key === last) return;
-      const a = load(frameUrl(s.segment, portrait, i0));
-      const b = load(frameUrl(s.segment, portrait, i1));
+      const b = load(frameUrl(s.segment, portrait, i1), { urgent: true });
+      const a = load(frameUrl(s.segment, portrait, i0), { urgent: true });
       const ctx = c.getContext("2d")!;
       if (!a.complete || !a.naturalWidth) return; // keep the previous frame until it arrives
       ctx.globalAlpha = 1;
